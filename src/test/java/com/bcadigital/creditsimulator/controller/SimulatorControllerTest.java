@@ -149,11 +149,23 @@ class SimulatorControllerTest {
     @Test
     void shouldRepromptField_whenYearInvalid() {
         final Harness harness = new Harness(false, PINNED, "http://[::1",
-                "hitung", "mobil", "baru", "2020", "100000000", "3", "35000000", "2025", "exit");
+                "hitung", "mobil", "baru", "2020", "2025", "100000000", "3", "35000000", "exit");
 
         harness.controller.run();
 
         assertThat(harness.output()).contains("Error:").contains("tahun 1 : Rp. 1,950,000.00/bln");
+    }
+
+    @Test
+    void shouldRejectImmediately_whenYearNotFourDigits() {
+        final Harness harness = new Harness(false, PINNED, "http://[::1",
+                "hitung", "mobil", "baru", "2", "2025", "100000000", "3", "35000000", "exit");
+
+        harness.controller.run();
+
+        assertThat(harness.output())
+                .contains("Error: Tahun kendaraan harus 4 digit angka")
+                .contains("tahun 1 : Rp. 1,950,000.00/bln");
     }
 
     @Test
