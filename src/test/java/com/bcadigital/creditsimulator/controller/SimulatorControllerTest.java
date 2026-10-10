@@ -5,6 +5,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Optional;
@@ -16,6 +19,8 @@ import com.bcadigital.creditsimulator.view.ConsoleView;
 import com.bcadigital.creditsimulator.view.InputSource;
 
 class SimulatorControllerTest {
+
+    private static final Clock PINNED = Clock.fixed(Instant.parse("2026-06-01T00:00:00Z"), ZoneOffset.UTC);
 
     private static final class QueueInputSource implements InputSource {
         private final Deque<String> lines;
@@ -38,10 +43,14 @@ class SimulatorControllerTest {
         final SimulatorController controller;
 
         Harness(final boolean batchMode, final String... lines) {
+            this(batchMode, Clock.systemDefaultZone(), lines);
+        }
+
+        Harness(final boolean batchMode, final Clock clock, final String... lines) {
             final ConsoleView view = new ConsoleView(
                     new QueueInputSource(lines),
                     new PrintStream(captured, true, StandardCharsets.UTF_8));
-            this.controller = new SimulatorController(view, batchMode);
+            this.controller = new SimulatorController(view, batchMode, clock);
         }
 
         String output() {
@@ -86,7 +95,7 @@ class SimulatorControllerTest {
         harness.controller.run();
 
         assertThat(harness.output()).contains("Error:");
-        assertThat(harness.output()).doesNotContain("(hitung:");
+        assertThat(harness.output()).doesNotContain("Suku Bunga");
     }
 
     @Test
@@ -99,51 +108,63 @@ class SimulatorControllerTest {
     }
 
     @Test
-    void shouldRunPlaceholders_whenHitungAndLoad() {
-        final Harness harness = new Harness(false, "hitung", "load", "exit");
-
-        harness.controller.run();
-
-        assertThat(harness.output()).contains("(hitung:").contains("(load:");
-    }
-
-    @Test
-    void shouldAssumeCommand_whenUniquePrefix() {
-        final Harness harness = new Harness(false, "h", "exit");
+    void shouldCalculate_whenFullHitungSession() {
+        final Harness harness = new Harness(false, PINNED,
+                "hitung", "mobil", "baru", "2025", "100000000", "3", "35000000", "exit");
 
         harness.controller.run();
 
         assertThat(harness.output())
-                .contains("(otomatis: \"h\" → hitung)")
-                .contains("(hitung:");
+                .contains("tahun 1 : Rp. 1,950,000.00/bln , Suku Bunga : 8%")
+                .contains("tahun 2 : Rp. 2,107,950.00/bln , Suku Bunga : 8,1%")
+                .contains("tahun 3 : Rp. 2,289,233.70/bln , Suku Bunga : 8,6%");
     }
 
     @Test
-    void shouldReprompt_whenEmptyLineInInteractiveMode() {
-        final Harness harness = new Harness(false, "", "exit");
+    void shouldAssumeOptions_whenUniquePrefixes() {
+        final Harness harness = new Harness(false, PINNED,
+                "hitung", "mot", "bek", "2015", "100000000", "2", "25000000", "exit");
 
         harness.controller.run();
 
-        assertThat(harness.output()).contains("Error:").contains("hitung");
+        assertThat(harness.output())
+                .contains("(otomatis: \"mot\" → Motor)")
+                .contains("(otomatis: \"bek\" → Bekas)")
+                .contains("tahun 1 : Rp. 3,406,250.00/bln , Suku Bunga : 9%")
+                .contains("tahun 2 : Rp. 3,716,218.75/bln , Suku Bunga : 9,1%");
     }
 
     @Test
-    void shouldAbort_whenEmptyLineInBatchMode() {
-        final Harness harness = new Harness(true, "", "hitung", "exit");
+    void shouldRepromptField_whenYearInvalid() {
+        final Harness harness = new Harness(false, PINNED,
+                "hitung", "mobil", "baru", "2020", "100000000", "3", "35000000", "2025", "exit");
+
+        harness.controller.run();
+
+        assertThat(harness.output()).contains("Error:").contains("tahun 1 : Rp. 1,950,000.00/bln");
+    }
+
+    @Test
+    void shouldReportAmbiguity_whenSharedPrefix() {
+        final Harness harness = new Harness(false, PINNED,
+                "hitung", "mo", "mobil", "bekas", "2015", "100000000", "2", "25000000", "exit");
+
+        harness.controller.run();
+
+        assertThat(harness.output())
+                .contains("\"mo\" ambigu (Mobil atau Motor?)")
+                .contains("tahun 1 :");
+    }
+
+    @Test
+    void shouldAbort_whenInvalidInputInBatchMode() {
+        final Harness harness = new Harness(true, PINNED,
+                "hitung", "mobil", "baru", "2020", "2025", "100000000", "3", "35000000", "exit");
 
         harness.controller.run();
 
         assertThat(harness.output()).contains("Error:");
-        assertThat(harness.output()).doesNotContain("(hitung:");
-    }
-
-    @Test
-    void shouldRecover_whenLargeInputAndSpecialCharacters() {
-        final Harness harness = new Harness(false, "x".repeat(10_000), "h3!@#$-\uD83D\uDE00", "exit");
-
-        harness.controller.run();
-
-        assertThat(harness.output()).contains("perintah tidak dikenal");
+        assertThat(harness.output()).doesNotContain("Suku Bunga");
     }
 
     @Test
