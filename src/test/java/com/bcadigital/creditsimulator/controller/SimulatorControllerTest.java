@@ -108,6 +108,45 @@ class SimulatorControllerTest {
     }
 
     @Test
+    void shouldAssumeCommand_whenUniquePrefix() {
+        final Harness harness = new Harness(false, "h", "exit");
+
+        harness.controller.run();
+
+        assertThat(harness.output())
+                .contains("(otomatis: \"h\" → hitung)")
+                .contains("(hitung:");
+    }
+
+    @Test
+    void shouldReprompt_whenEmptyLineInInteractiveMode() {
+        final Harness harness = new Harness(false, "", "exit");
+
+        harness.controller.run();
+
+        assertThat(harness.output()).contains("Error:").contains("hitung");
+    }
+
+    @Test
+    void shouldAbort_whenEmptyLineInBatchMode() {
+        final Harness harness = new Harness(true, "", "hitung", "exit");
+
+        harness.controller.run();
+
+        assertThat(harness.output()).contains("Error:");
+        assertThat(harness.output()).doesNotContain("(hitung:");
+    }
+
+    @Test
+    void shouldRecover_whenLargeInputAndSpecialCharacters() {
+        final Harness harness = new Harness(false, "x".repeat(10_000), "h3!@#$-\uD83D\uDE00", "exit");
+
+        harness.controller.run();
+
+        assertThat(harness.output()).contains("perintah tidak dikenal");
+    }
+
+    @Test
     void shouldReturnFalse_whenDispatchExit() {
         final Harness harness = new Harness(false);
 
