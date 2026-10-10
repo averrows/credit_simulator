@@ -183,6 +183,22 @@ class SimulatorControllerTest {
     }
 
     @Test
+    void shouldAbortHitung_whenEndOfInput() {
+        final Harness harness = new Harness(false, PINNED, "http://[::1");
+
+        assertThat(harness.controller.dispatch(MenuCommand.HITUNG)).isTrue();
+        assertThat(harness.output()).contains("Jenis Kendaraan");
+    }
+
+    @Test
+    void shouldCalculateFallback_whenDispatchLoad() {
+        final Harness harness = new Harness(false, PINNED, "http://[::1");
+
+        assertThat(harness.controller.dispatch(MenuCommand.LOAD)).isTrue();
+        assertThat(harness.output()).contains("(peringatan:").contains("tahun 6 :");
+    }
+
+    @Test
     void shouldReturnFalse_whenDispatchExit() {
         final Harness harness = new Harness(false);
 
