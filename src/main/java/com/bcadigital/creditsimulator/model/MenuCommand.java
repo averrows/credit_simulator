@@ -28,11 +28,11 @@ public enum MenuCommand {
     }
 
     /**
-     * Returns the canonical command name as typed by users (lowercase).
+     * Returns the lowercase key used for matching user input.
      *
-     * @return the lowercase command name, e.g. {@code "hitung"}
+     * @return the lowercase key, e.g. {@code "hitung"}
      */
-    public String commandName() {
+    public String key() {
         return name().toLowerCase(Locale.ROOT);
     }
 
@@ -54,13 +54,13 @@ public enum MenuCommand {
         }
         final String normalized = raw.trim().toLowerCase(Locale.ROOT);
         for (final MenuCommand command : values()) {
-            if (command.commandName().equals(normalized)) {
+            if (command.key().equals(normalized)) {
                 return Optional.of(new Match<>(command, false));
             }
         }
         MenuCommand hit = null;
         for (final MenuCommand command : values()) {
-            if (command.commandName().startsWith(normalized)) {
+            if (command.key().startsWith(normalized)) {
                 if (hit != null) {
                     return Optional.empty();
                 }

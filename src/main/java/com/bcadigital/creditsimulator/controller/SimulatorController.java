@@ -65,7 +65,7 @@ public final class SimulatorController {
         }
         final Match<MenuCommand> match = parsed.get();
         if (match.assumed()) {
-            view.showMessage("(otomatis: \"" + line.trim() + "\" → " + match.value().commandName() + ")");
+            view.showMessage("(otomatis: \"" + line.trim() + "\" → " + match.value().key() + ")");
         }
         return dispatch(match.value());
     }
