@@ -77,7 +77,15 @@ public final class LoanValidator {
         return new LoanRequest(vehicleType, vehicleCondition, year, total, tenor, downPayment);
     }
 
-    private int parseYear(final String raw, final VehicleCondition condition) {
+    /**
+     * Parses and validates one year input immediately after entry.
+     *
+     * @param raw the raw year text
+     * @param condition the vehicle condition for the Rule 1 check; never null
+     * @return the valid year
+     * @throws InvalidYearException when not 4 digits, or a new vehicle is too old
+     */
+    public int parseYear(final String raw, final VehicleCondition condition) {
         final String digits = requireDigits(raw,
                 () -> new InvalidYearException("Tahun kendaraan harus 4 digit angka, contoh: 2025"));
         if (digits.length() != 4) {
@@ -92,7 +100,14 @@ public final class LoanValidator {
         return year;
     }
 
-    private long parseTotal(final String raw) {
+    /**
+     * Parses and validates one total-loan input immediately after entry.
+     *
+     * @param raw the raw total text
+     * @return the valid total in rupiah
+     * @throws InvalidTotalLoanException when not numeric or out of range
+     */
+    public long parseTotal(final String raw) {
         final String digits = requireDigits(raw,
                 () -> new InvalidTotalLoanException("Jumlah pinjaman harus angka, contoh: 100000000"));
         final long total = parseLong(digits,
@@ -103,7 +118,14 @@ public final class LoanValidator {
         return total;
     }
 
-    private int parseTenor(final String raw) {
+    /**
+     * Parses and validates one tenure input immediately after entry.
+     *
+     * @param raw the raw tenure text
+     * @return the valid tenure in years
+     * @throws InvalidTenorException when not numeric or out of range
+     */
+    public int parseTenor(final String raw) {
         final String digits = requireDigits(raw,
                 () -> new InvalidTenorException("Tenor harus angka 1 sampai 6 (tahun)"));
         final long tenor = parseLong(digits,
@@ -114,7 +136,17 @@ public final class LoanValidator {
         return (int) tenor;
     }
 
-    private long parseDownPayment(
+    /**
+     * Parses and validates one down-payment input immediately after entry.
+     *
+     * @param raw the raw DP text
+     * @param condition the vehicle condition for the minimum; never null
+     * @param total the already-validated total loan amount
+     * @return the valid DP in rupiah
+     * @throws InvalidDownPaymentException when not numeric, not less than the
+     *     total, or below the condition minimum
+     */
+    public long parseDownPayment(
             final String raw, final VehicleCondition condition, final long total) {
         final String digits = requireDigits(raw,
                 () -> new InvalidDownPaymentException("DP harus angka, contoh: 35000000"));

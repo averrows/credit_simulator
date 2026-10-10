@@ -153,31 +153,50 @@ public final class SimulatorController {
         if (condition == null) {
             return;
         }
-        String year = view.prompt("Tahun Kendaraan [YYYY]: ");
-        String total = view.prompt("Jumlah Pinjaman Total: ");
-        String tenor = view.prompt("Tenor Pinjaman (1-6 thn): ");
-        String downPayment = view.prompt("Jumlah DP: ");
+        final Integer year = promptValidated("Tahun Kendaraan [YYYY]: ",
+                raw -> validator.parseYear(raw, condition));
+        if (year == null) {
+            return;
+        }
+        final Long total = promptValidated("Jumlah Pinjaman Total: ", validator::parseTotal);
+        if (total == null) {
+            return;
+        }
+        final Integer tenor = promptValidated("Tenor Pinjaman (1-6 thn): ", validator::parseTenor);
+        if (tenor == null) {
+            return;
+        }
+        final Long downPayment = promptValidated("Jumlah DP: ",
+                raw -> validator.parseDownPayment(raw, condition, total));
+        if (downPayment == null) {
+            return;
+        }
+        view.showResult(calculator.calculate(new LoanRequest(type, condition, year, total, tenor, downPayment)));
+    }
+
+    /**
+     * Prompts one numeric field until it validates, reporting the error at once.
+     *
+     * @param <T> the parsed value type
+     * @param label the prompt text
+     * @param parser parses and validates one entry, throwing on invalid input
+     * @return the valid value, or null on end-of-input or batch-mode abort
+     */
+    private <T> T promptValidated(final String label, final Function<String, T> parser) {
         while (true) {
-            if (year == null || total == null || tenor == null || downPayment == null) {
+            final String raw = view.prompt(label);
+            if (raw == null) {
                 if (batchMode) {
                     view.showError("file input tidak lengkap untuk hitung");
                 }
-                return;
+                return null;
             }
             try {
-                final LoanRequest request = validator.validate(type, condition, year, total, tenor, downPayment);
-                view.showResult(calculator.calculate(request));
-                return;
+                return parser.apply(raw);
             } catch (final InvalidLoanInputException e) {
                 view.showError(e.getMessage());
                 if (batchMode) {
-                    return;
-                }
-                switch (e.getField()) {
-                    case VEHICLE_YEAR -> year = view.prompt("Tahun Kendaraan [YYYY]: ");
-                    case TOTAL_LOAN -> total = view.prompt("Jumlah Pinjaman Total: ");
-                    case TENURE -> tenor = view.prompt("Tenor Pinjaman (1-6 thn): ");
-                    case DOWN_PAYMENT -> downPayment = view.prompt("Jumlah DP: ");
+                    return null;
                 }
             }
         }
