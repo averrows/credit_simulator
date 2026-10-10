@@ -78,8 +78,12 @@ public final class SimulatorController {
 
     /**
      * Runs the menu loop until {@code exit} or end-of-input.
+     *
+     * <p>Lists the available commands first, so users immediately see what they
+     * can do without guessing or typing {@code show}.
      */
     public void run() {
+        view.showMessage(MenuCommand.describeAll());
         while (true) {
             final String raw = view.prompt("> ");
             if (raw == null) {

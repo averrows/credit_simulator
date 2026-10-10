@@ -71,6 +71,15 @@ class SimulatorControllerTest {
     }
 
     @Test
+    void shouldListCommands_whenStarted() {
+        final Harness harness = new Harness(false, "exit");
+
+        harness.controller.run();
+
+        assertThat(harness.output()).contains("hitung").contains("load").contains("show").contains("exit");
+    }
+
+    @Test
     void shouldShowCommands_whenShowCommand() {
         final Harness harness = new Harness(false, "show", "exit");
 
