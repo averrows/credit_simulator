@@ -50,7 +50,7 @@ class MenuCommandTest {
     }
 
     @Test
-    void shouldReturnLowercaseName_whenCommandName() {
-        assertThat(MenuCommand.HITUNG.commandName()).isEqualTo("hitung");
+    void shouldReturnLowercaseKey_whenKey() {
+        assertThat(MenuCommand.HITUNG.key()).isEqualTo("hitung");
     }
 }
