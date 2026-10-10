@@ -15,6 +15,8 @@ import com.bcadigital.creditsimulator.model.VehicleType;
 import com.bcadigital.creditsimulator.service.InstallmentCalculator;
 import com.bcadigital.creditsimulator.service.InvalidLoanInputException;
 import com.bcadigital.creditsimulator.service.LoanValidator;
+import com.bcadigital.creditsimulator.service.RemoteLoad;
+import com.bcadigital.creditsimulator.service.RemoteLoader;
 import com.bcadigital.creditsimulator.view.ConsoleView;
 
 /**
@@ -31,6 +33,7 @@ public final class SimulatorController {
     private final boolean batchMode;
     private final LoanValidator validator;
     private final InstallmentCalculator calculator;
+    private final RemoteLoader loader;
 
     /**
      * Creates a controller using the system clock.
@@ -51,11 +54,26 @@ public final class SimulatorController {
      * @param clock the clock for year validation; never null
      */
     SimulatorController(final ConsoleView view, final boolean batchMode, final Clock clock) {
+        this(view, batchMode, clock, RemoteLoader.DEFAULT_URL);
+    }
+
+    /**
+     * Creates a controller with an explicit clock and API endpoint (tests pin both here).
+     *
+     * @param view the console view; never null
+     * @param batchMode true for file mode; never re-prompts
+     * @param clock the clock for year validation; never null
+     * @param apiUrl the web-service endpoint for {@code load}; never null
+     */
+    public SimulatorController(final ConsoleView view, final boolean batchMode,
+            final Clock clock, final String apiUrl) {
         this.view = Objects.requireNonNull(view, "view");
         this.batchMode = batchMode;
         Objects.requireNonNull(clock, "clock");
+        Objects.requireNonNull(apiUrl, "apiUrl");
         this.validator = new LoanValidator(clock);
         this.calculator = new InstallmentCalculator();
+        this.loader = RemoteLoader.withDefaultClient(apiUrl, validator);
     }
 
     /**
@@ -207,6 +225,10 @@ public final class SimulatorController {
     }
 
     private void onLoad() {
-        view.showMessage("(load: ambil JSON + auto-hitung — diimplementasikan di unit berikutnya)");
+        final RemoteLoad loaded = loader.load();
+        if (loaded.fallbackUsed()) {
+            view.showMessage("(peringatan: web service tidak dapat dihubungi — memakai contoh bawaan)");
+        }
+        view.showResult(calculator.calculate(loaded.request()));
     }
 }
