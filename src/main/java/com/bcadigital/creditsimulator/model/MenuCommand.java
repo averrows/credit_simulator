@@ -28,22 +28,46 @@ public enum MenuCommand {
     }
 
     /**
-     * Parses raw user input into a command.
+     * Returns the canonical command name as typed by users (lowercase).
+     *
+     * @return the lowercase command name, e.g. {@code "hitung"}
+     */
+    public String commandName() {
+        return name().toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * Parses raw user input into a command, accepting a unique prefix.
+     *
+     * <p>Matching is case-insensitive and trims surrounding whitespace. An exact match
+     * yields {@code assumed = false}; a unique prefix (e.g. {@code "h"} for {@code hitung})
+     * yields {@code assumed = true} so the caller can tell the user which command was
+     * auto-selected instead of silently guessing.
      *
      * @param raw the raw line typed by the user or read from a file; may be null
-     * @return the matching command, or empty when the input is null, blank, or unknown
+     * @return the match, or empty when the input is null, blank, unknown, or ambiguous
+     *     (a prefix of more than one command)
      */
-    public static Optional<MenuCommand> parse(final String raw) {
+    public static Optional<Match<MenuCommand>> parse(final String raw) {
         if (raw == null || raw.isBlank()) {
             return Optional.empty();
         }
         final String normalized = raw.trim().toLowerCase(Locale.ROOT);
         for (final MenuCommand command : values()) {
-            if (command.name().toLowerCase(Locale.ROOT).equals(normalized)) {
-                return Optional.of(command);
+            if (command.commandName().equals(normalized)) {
+                return Optional.of(new Match<>(command, false));
             }
         }
-        return Optional.empty();
+        MenuCommand hit = null;
+        for (final MenuCommand command : values()) {
+            if (command.commandName().startsWith(normalized)) {
+                if (hit != null) {
+                    return Optional.empty();
+                }
+                hit = command;
+            }
+        }
+        return Optional.ofNullable(hit).map(command -> new Match<>(command, true));
     }
 
     /**

@@ -3,6 +3,7 @@ package com.bcadigital.creditsimulator.controller;
 import java.util.Objects;
 import java.util.Optional;
 
+import com.bcadigital.creditsimulator.model.Match;
 import com.bcadigital.creditsimulator.model.MenuCommand;
 import com.bcadigital.creditsimulator.view.ConsoleView;
 
@@ -41,20 +42,32 @@ public final class SimulatorController {
             if (raw == null) {
                 return;
             }
-            final Optional<MenuCommand> parsed = MenuCommand.parse(raw);
-            if (parsed.isEmpty()) {
-                view.showError("perintah tidak dikenal: \"" + raw.trim() + "\"");
-                view.showMessage(MenuCommand.describeAll());
-                if (batchMode) {
-                    return;
-                }
-                continue;
-            }
-            final boolean keepGoing = dispatch(parsed.get());
+            final boolean keepGoing = handleLine(raw);
             if (!keepGoing) {
                 return;
             }
         }
+    }
+
+    /**
+     * Handles one input line: parses it and dispatches, or reports the error.
+     *
+     * @param line the raw input line; never null
+     * @return false when the loop should stop (exit command, or any unknown command in
+     *     batch mode where nobody is there to retype), true otherwise
+     */
+    boolean handleLine(final String line) {
+        final Optional<Match<MenuCommand>> parsed = MenuCommand.parse(line);
+        if (parsed.isEmpty()) {
+            view.showError("perintah tidak dikenal: \"" + line.trim() + "\"");
+            view.showMessage(MenuCommand.describeAll());
+            return !batchMode;
+        }
+        final Match<MenuCommand> match = parsed.get();
+        if (match.assumed()) {
+            view.showMessage("(otomatis: \"" + line.trim() + "\" → " + match.value().commandName() + ")");
+        }
+        return dispatch(match.value());
     }
 
     /**
