@@ -63,6 +63,9 @@ dicoba langsung: `./credit_simulator file_inputs.txt`.
 
 - Baru: tahun ≥ tahun-berjalan − 1; tahun selalu 4 digit angka.
 - Tenor 1–6 tahun. Total pinjaman 1–1.000.000.000.
+- Nominal boleh pakai akhiran: `rb`/`ribu` (×1.000), `jt`/`juta` (×1jt),
+  `m`/`miliar`/`milyar` (×1M) — contoh: `500 rb`, `203.35 jt`, `0,1 m`.
+  Koma/titik dua-duanya bisa jadi desimal.
 - DP Baru ≥ 35%, DP Bekas ≥ 25%, dan DP harus kurang dari total pinjaman.
 
 ## Bunga & rumus (Rules 7–9 + Rumus.xlsx)
