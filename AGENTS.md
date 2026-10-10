@@ -9,7 +9,8 @@
 - Source of truth for agent behavior is this file. If repo docs conflict, this file wins.
 
 ## Working Conventions
-1. Keep changes small and focused — one unit of work per task.
+1. **Talk first before implementing (REQUIRED).** Every time you want to implement something (feature, refactor, fix, structure change), present the why + proposed structure/plan to the user FIRST and wait for approval. Let the user grill the reasoning. Do NOT write/edit code until they say go. Exception: trivial doc/comment fixes in the file you were explicitly asked to touch.
+2. Keep changes small and focused — one unit of work per task.
 2. Prefer reading existing files (`read`) over guessing. Check for related code/tests before adding new things.
 3. Use `edit` for targeted changes, `write` only for new files or full rewrites.
 4. Use `bash` for `ls`, `rg`, `find`, running tests/linters — do not `cat`/`sed` to view files.
