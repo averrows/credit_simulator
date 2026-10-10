@@ -72,6 +72,9 @@ class LoanValidatorTest {
         assertThat(fieldOf(() -> validator.validate(
                 VehicleType.MOBIL, VehicleCondition.BARU, "abcd", "100000000", "3", "35000000")))
                 .isEqualTo(Field.VEHICLE_YEAR);
+        assertThat(fieldOf(() -> validator.validate(
+                VehicleType.MOBIL, VehicleCondition.BEKAS, "200032", "100000000", "3", "25000000")))
+                .isEqualTo(Field.VEHICLE_YEAR);
     }
 
     @Test
@@ -123,6 +126,16 @@ class LoanValidatorTest {
                 VehicleType.MOTOR, VehicleCondition.BEKAS, "2015", "100000000", "2", "25000000");
 
         assertThat(bekas.downPayment()).isEqualTo(25_000_000L);
+    }
+
+    @Test
+    void shouldReject_whenDownPaymentOneRupiahBelowMinimum() {
+        assertThat(fieldOf(() -> validator.validate(
+                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "100000000", "3", "34999999")))
+                .isEqualTo(Field.DOWN_PAYMENT);
+        assertThat(fieldOf(() -> validator.validate(
+                VehicleType.MOTOR, VehicleCondition.BEKAS, "2015", "100000000", "2", "24999999")))
+                .isEqualTo(Field.DOWN_PAYMENT);
     }
 
     @Test
