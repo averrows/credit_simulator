@@ -43,14 +43,17 @@ class SimulatorControllerTest {
         final SimulatorController controller;
 
         Harness(final boolean batchMode, final String... lines) {
-            this(batchMode, Clock.systemDefaultZone(), lines);
-        }
-
-        Harness(final boolean batchMode, final Clock clock, final String... lines) {
             final ConsoleView view = new ConsoleView(
                     new QueueInputSource(lines),
                     new PrintStream(captured, true, StandardCharsets.UTF_8));
-            this.controller = new SimulatorController(view, batchMode, clock);
+            this.controller = new SimulatorController(view, batchMode);
+        }
+
+        Harness(final boolean batchMode, final Clock clock, final String apiUrl, final String... lines) {
+            final ConsoleView view = new ConsoleView(
+                    new QueueInputSource(lines),
+                    new PrintStream(captured, true, StandardCharsets.UTF_8));
+            this.controller = new SimulatorController(view, batchMode, clock, apiUrl);
         }
 
         String output() {
@@ -109,7 +112,7 @@ class SimulatorControllerTest {
 
     @Test
     void shouldCalculate_whenFullHitungSession() {
-        final Harness harness = new Harness(false, PINNED,
+        final Harness harness = new Harness(false, PINNED, "http://[::1",
                 "hitung", "mobil", "baru", "2025", "100000000", "3", "35000000", "exit");
 
         harness.controller.run();
@@ -122,7 +125,7 @@ class SimulatorControllerTest {
 
     @Test
     void shouldAssumeOptions_whenUniquePrefixes() {
-        final Harness harness = new Harness(false, PINNED,
+        final Harness harness = new Harness(false, PINNED, "http://[::1",
                 "hitung", "mot", "bek", "2015", "100000000", "2", "25000000", "exit");
 
         harness.controller.run();
@@ -136,7 +139,7 @@ class SimulatorControllerTest {
 
     @Test
     void shouldRepromptField_whenYearInvalid() {
-        final Harness harness = new Harness(false, PINNED,
+        final Harness harness = new Harness(false, PINNED, "http://[::1",
                 "hitung", "mobil", "baru", "2020", "100000000", "3", "35000000", "2025", "exit");
 
         harness.controller.run();
@@ -146,7 +149,7 @@ class SimulatorControllerTest {
 
     @Test
     void shouldReportAmbiguity_whenSharedPrefix() {
-        final Harness harness = new Harness(false, PINNED,
+        final Harness harness = new Harness(false, PINNED, "http://[::1",
                 "hitung", "mo", "mobil", "bekas", "2015", "100000000", "2", "25000000", "exit");
 
         harness.controller.run();
@@ -158,13 +161,25 @@ class SimulatorControllerTest {
 
     @Test
     void shouldAbort_whenInvalidInputInBatchMode() {
-        final Harness harness = new Harness(true, PINNED,
+        final Harness harness = new Harness(true, PINNED, "http://[::1",
                 "hitung", "mobil", "baru", "2020", "2025", "100000000", "3", "35000000", "exit");
 
         harness.controller.run();
 
         assertThat(harness.output()).contains("Error:");
         assertThat(harness.output()).doesNotContain("Suku Bunga");
+    }
+
+    @Test
+    void shouldWarnAndCalculateFallback_whenLoadFails() {
+        final Harness harness = new Harness(false, PINNED, "http://[::1", "load", "exit");
+
+        harness.controller.run();
+
+        assertThat(harness.output())
+                .contains("(peringatan: web service tidak dapat dihubungi — memakai contoh bawaan)")
+                .contains("tahun 1 : Rp. 7,500,000.00/bln , Suku Bunga : 8%")
+                .contains("tahun 6 : Rp. 11,423,235.41/bln , Suku Bunga : 9,3%");
     }
 
     @Test
