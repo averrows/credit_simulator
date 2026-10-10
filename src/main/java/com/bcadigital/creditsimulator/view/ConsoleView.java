@@ -1,14 +1,22 @@
 package com.bcadigital.creditsimulator.view;
 
 import java.io.PrintStream;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.util.Locale;
 import java.util.Objects;
+
+import com.bcadigital.creditsimulator.model.SimulationResult;
+import com.bcadigital.creditsimulator.model.YearlyResult;
 
 /**
  * All console output of the application.
  *
- * <p>Deliberately thin: the view never validates, never branches on commands, and
- * never imports the model package. It prints exactly what the controller tells it
- * to print, so every decision stays in the controller (the deep module).
+ * <p>Deliberately thin: the view never validates and never branches. It renders what
+ * the controller hands it (including read-only model data), so every decision stays
+ * in the controller (the deep module).
  */
 public final class ConsoleView {
 
@@ -53,5 +61,31 @@ public final class ConsoleView {
      */
     public void showError(final String message) {
         output.println("Error: " + Objects.requireNonNull(message, "message"));
+    }
+
+    /**
+     * Prints one simulation result as per-year lines, following the spec sample:
+     * {@code tahun 1 : Rp. 2,250,000.00/bln , Suku Bunga : 8%}.
+     *
+     * @param result the result; never null
+     */
+    public void showResult(final SimulationResult result) {
+        Objects.requireNonNull(result, "result");
+        for (final YearlyResult yearly : result.yearlyResults()) {
+            output.println("tahun " + yearly.year() + " : Rp. " + formatMoney(yearly.monthlyInstallment())
+                    + "/bln , Suku Bunga : " + formatRate(yearly.annualRate()));
+        }
+    }
+
+    private static String formatMoney(final BigDecimal amount) {
+        final DecimalFormat format = new DecimalFormat("#,##0.00",
+                DecimalFormatSymbols.getInstance(Locale.US));
+        format.setRoundingMode(RoundingMode.HALF_UP);
+        return format.format(amount);
+    }
+
+    private static String formatRate(final BigDecimal rate) {
+        return rate.multiply(BigDecimal.valueOf(100)).stripTrailingZeros().toPlainString()
+                .replace('.', ',') + "%";
     }
 }

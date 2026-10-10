@@ -1,2 +1,9 @@
 show
+hitung
+Mobil
+Bekas
+2015
+100000000
+3
+25000000
 exit
