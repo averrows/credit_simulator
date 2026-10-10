@@ -155,6 +155,50 @@ class LoanValidatorTest {
                 .isEqualTo(Field.DOWN_PAYMENT);
     }
 
+    @Test
+    void shouldAccept_whenMagnitudeSuffixes() {
+        assertThat(validator.validate(
+                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "100 jt", "3", "35 jt")
+                .totalLoanAmount()).isEqualTo(100_000_000L);
+        assertThat(validator.validate(
+                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "0,1 m", "3", "35000 rb")
+                .downPayment()).isEqualTo(35_000_000L);
+        assertThat(validator.validate(
+                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "100000 rb", "3", "35 JUTA")
+                .totalLoanAmount()).isEqualTo(100_000_000L);
+        assertThat(validator.validate(
+                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "203.35 jt", "3", "100 jt")
+                .totalLoanAmount()).isEqualTo(203_350_000L);
+    }
+
+    @Test
+    void shouldAccept_whenSuffixAtMaxBoundary() {
+        final LoanRequest request = validator.validate(
+                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "1 m", "6", "350 jt");
+
+        assertThat(request.totalLoanAmount()).isEqualTo(1_000_000_000L);
+        assertThat(request.downPayment()).isEqualTo(350_000_000L);
+    }
+
+    @Test
+    void shouldReject_whenSuffixAmountInvalid() {
+        assertThat(fieldOf(() -> validator.validate(
+                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "1.5 m", "3", "1 m")))
+                .isEqualTo(Field.TOTAL_LOAN);
+        assertThat(fieldOf(() -> validator.validate(
+                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "100 jt", "3", "34.999999 jt")))
+                .isEqualTo(Field.DOWN_PAYMENT);
+        assertThat(fieldOf(() -> validator.validate(
+                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "100 jt", "3", "0.0000001 jt")))
+                .isEqualTo(Field.DOWN_PAYMENT);
+        assertThat(fieldOf(() -> validator.validate(
+                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "jt", "3", "35 jt")))
+                .isEqualTo(Field.TOTAL_LOAN);
+        assertThat(fieldOf(() -> validator.validate(
+                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "abc jt", "3", "35 jt")))
+                .isEqualTo(Field.TOTAL_LOAN);
+    }
+
     private static Field fieldOf(final RunnableWithFailure action) {
         try {
             action.run();

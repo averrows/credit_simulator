@@ -133,6 +133,16 @@ class SimulatorControllerTest {
     }
 
     @Test
+    void shouldCalculate_whenMoneySuffixes() {
+        final Harness harness = new Harness(false, PINNED, "http://[::1",
+                "hitung", "mobil", "baru", "2025", "100 jt", "3", "35 jt", "exit");
+
+        harness.controller.run();
+
+        assertThat(harness.output()).contains("tahun 1 : Rp. 1,950,000.00/bln");
+    }
+
+    @Test
     void shouldAssumeOptions_whenUniquePrefixes() {
         final Harness harness = new Harness(false, PINNED, "http://[::1",
                 "hitung", "mot", "bek", "2015", "100000000", "2", "25000000", "exit");
