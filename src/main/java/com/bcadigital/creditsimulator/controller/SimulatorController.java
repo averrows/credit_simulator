@@ -120,21 +120,22 @@ public final class SimulatorController {
      * @return false when the loop should stop, true otherwise
      */
     boolean dispatch(final MenuCommand command) {
-        switch (Objects.requireNonNull(command, "command")) {
-            case HITUNG:
+        Objects.requireNonNull(command, "command");
+        return switch (command) {
+            case HITUNG -> {
                 onHitung();
-                return true;
-            case LOAD:
+                yield true;
+            }
+            case LOAD -> {
                 onLoad();
-                return true;
-            case SHOW:
+                yield true;
+            }
+            case SHOW -> {
                 view.showMessage(MenuCommand.describeAll());
-                return true;
-            case EXIT:
-                return false;
-            default:
-                throw new IllegalStateException("command belum ditangani: " + command);
-        }
+                yield true;
+            }
+            case EXIT -> false;
+        };
     }
 
     private void onHitung() {
