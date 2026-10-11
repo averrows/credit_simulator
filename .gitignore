@@ -2,6 +2,8 @@ target/
 *.class
 *.jar
 *.war
+mock-server/loans_*.csv
+mock-server/batch_*.txt
 .DS_Store
 .idea/
 *.iml
