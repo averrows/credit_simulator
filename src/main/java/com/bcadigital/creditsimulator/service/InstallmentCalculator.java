@@ -2,9 +2,9 @@ package com.bcadigital.creditsimulator.service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Stream;
 
 import com.bcadigital.creditsimulator.model.LoanRequest;
 import com.bcadigital.creditsimulator.model.SimulationResult;
@@ -33,18 +33,46 @@ public final class InstallmentCalculator {
     public SimulationResult calculate(final LoanRequest request) {
         Objects.requireNonNull(request, "request");
         final RatePolicy policy = VehicleRateFactory.forType(request.vehicleType());
-        BigDecimal remaining = BigDecimal.valueOf(request.totalLoanAmount() - request.downPayment());
+        final BigDecimal principal =
+                BigDecimal.valueOf(request.totalLoanAmount() - request.downPayment());
         final int totalMonths = request.loanTenureYears() * MONTHS_PER_YEAR;
-        final List<YearlyResult> yearly = new ArrayList<>();
-        for (int year = 1; year <= request.loanTenureYears(); year++) {
+        final List<YearlyResult> yearly = Stream
+                .iterate(
+                        YearStep.first(principal, policy, totalMonths),
+                        step -> step.year() <= request.loanTenureYears(),
+                        step -> step.next(policy, totalMonths))
+                .map(step -> new YearlyResult(step.year(), step.rate(), step.monthly()))
+                .toList();
+        return new SimulationResult(request, yearly);
+    }
+
+    /**
+     * One computed loan year plus the principal left after its payments.
+     *
+     * @param year the 1-based loan year
+     * @param rate the rate applied that year
+     * @param monthly the monthly installment
+     * @param remaining the principal left for the next year
+     */
+    private record YearStep(int year, BigDecimal rate, BigDecimal monthly, BigDecimal remaining) {
+
+        static YearStep first(final BigDecimal principal, final RatePolicy policy, final int totalMonths) {
+            return step(1, principal, policy, totalMonths);
+        }
+
+        YearStep next(final RatePolicy policy, final int totalMonths) {
+            return step(year + 1, remaining, policy, totalMonths);
+        }
+
+        private static YearStep step(final int year, final BigDecimal remaining,
+                final RatePolicy policy, final int totalMonths) {
             final BigDecimal rate = policy.annualRate(year);
             final BigDecimal yearTotal = remaining.multiply(BigDecimal.ONE.add(rate));
             final int monthsLeft = totalMonths - (year - 1) * MONTHS_PER_YEAR;
             final BigDecimal monthly = yearTotal.divide(
                     BigDecimal.valueOf(monthsLeft), MONEY_SCALE, RoundingMode.HALF_UP);
-            yearly.add(new YearlyResult(year, rate, monthly));
-            remaining = yearTotal.subtract(monthly.multiply(BigDecimal.valueOf(MONTHS_PER_YEAR)));
+            return new YearStep(year, rate, monthly,
+                    yearTotal.subtract(monthly.multiply(BigDecimal.valueOf(MONTHS_PER_YEAR))));
         }
-        return new SimulationResult(request, yearly);
     }
 }
