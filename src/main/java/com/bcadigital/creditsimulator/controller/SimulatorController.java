@@ -2,6 +2,7 @@ package com.bcadigital.creditsimulator.controller;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.StringJoiner;
 import java.util.function.Function;
 
 import com.bcadigital.creditsimulator.model.Choice;
@@ -11,11 +12,15 @@ import com.bcadigital.creditsimulator.model.LoanRequest;
 import com.bcadigital.creditsimulator.model.Match;
 import com.bcadigital.creditsimulator.model.MenuCommand;
 import com.bcadigital.creditsimulator.model.Rupiah;
+import com.bcadigital.creditsimulator.model.Sheet;
+import com.bcadigital.creditsimulator.model.SimulationResult;
 import com.bcadigital.creditsimulator.model.VehicleCondition;
 import com.bcadigital.creditsimulator.model.VehicleType;
 import com.bcadigital.creditsimulator.service.LoadService;
 import com.bcadigital.creditsimulator.service.LoanValidation;
 import com.bcadigital.creditsimulator.service.RemoteLoad;
+import com.bcadigital.creditsimulator.repository.SheetStorageException;
+import com.bcadigital.creditsimulator.service.SheetBook;
 import com.bcadigital.creditsimulator.service.SimulationCalculator;
 import com.bcadigital.creditsimulator.view.SimulatorView;
 
@@ -34,8 +39,10 @@ public final class SimulatorController {
     private final LoanValidation validator;
     private final SimulationCalculator calculator;
     private final LoadService loader;
+    private final SheetBook sheets;
     private final Map<MenuCommand, CommandHandler> handlers;
     private boolean batchFailed;
+    private SimulationResult lastResult;
 
     /**
      * Creates a controller over the given collaborators.
@@ -46,18 +53,22 @@ public final class SimulatorController {
      * @param validator validates loan inputs; never null
      * @param calculator calculates schedules; never null
      * @param loader fetches saved calculations; never null
+     * @param sheets the saved sheets for {@code save} and {@code switch}; never null
      */
     public SimulatorController(final SimulatorView view, final boolean batchMode,
             final LoanValidation validator, final SimulationCalculator calculator,
-            final LoadService loader) {
+            final LoadService loader, final SheetBook sheets) {
         this.view = Objects.requireNonNull(view, "view");
         this.batchMode = batchMode;
         this.validator = Objects.requireNonNull(validator, "validator");
         this.calculator = Objects.requireNonNull(calculator, "calculator");
         this.loader = Objects.requireNonNull(loader, "loader");
+        this.sheets = Objects.requireNonNull(sheets, "sheets");
         this.handlers = Map.of(
                 MenuCommand.HITUNG, this::onHitung,
                 MenuCommand.LOAD, this::onLoad,
+                MenuCommand.SAVE, this::onSave,
+                MenuCommand.SWITCH, this::onSwitch,
                 MenuCommand.SHOW, this::onShow,
                 MenuCommand.EXIT, () -> false);
         if (handlers.size() != MenuCommand.values().length) {
@@ -76,6 +87,7 @@ public final class SimulatorController {
      *     invalid or incomplete, so the caller can exit with a failure status
      */
     public boolean run() {
+        sheets.loadWarning().ifPresent(warning -> view.showMessage("(peringatan: " + warning + ")"));
         view.showMessage(MenuCommand.describeAll());
         String raw = view.prompt("> ");
         while (raw != null && handleLine(raw)) {
@@ -124,9 +136,8 @@ public final class SimulatorController {
             final int tenor = ask("Tenor Pinjaman (1-6 thn): ", validator::parseTenor);
             final Rupiah downPayment = ask("Jumlah DP: ",
                     raw -> validator.parseDownPayment(raw, condition, total));
-            view.showResult(calculator.calculate(
-                    new LoanRequest(type, condition, year, total, tenor, downPayment)));
-        } catch (final HitungAborted e) {
+            show(calculator.calculate(new LoanRequest(type, condition, year, total, tenor, downPayment)));
+        } catch (final InputAborted e) {
             // The reason was already shown to the user.
             return continueAfterError();
         }
@@ -153,23 +164,23 @@ public final class SimulatorController {
      * @param label the prompt text
      * @param parser parses one entry, throwing {@link InvalidInputException} when invalid
      * @return the valid value, never null
-     * @throws HitungAborted on end-of-input, or on the first invalid entry in batch mode
+     * @throws InputAborted on end-of-input, or on the first invalid entry in batch mode
      */
     private <T> T ask(final String label, final Function<String, T> parser) {
         while (true) {
             final String raw = view.prompt(label);
             if (raw == null) {
                 if (batchMode) {
-                    view.showError("file input tidak lengkap untuk hitung");
+                    view.showError("file input tidak lengkap");
                 }
-                throw new HitungAborted();
+                throw new InputAborted();
             }
             try {
                 return parser.apply(raw);
             } catch (final InvalidInputException e) {
                 view.showError(e.getMessage());
                 if (batchMode) {
-                    throw new HitungAborted();
+                    throw new InputAborted();
                 }
             }
         }
@@ -192,8 +203,58 @@ public final class SimulatorController {
         if (loaded.fallbackUsed()) {
             view.showMessage("(peringatan: web service tidak dapat dihubungi — memakai contoh bawaan)");
         }
-        view.showResult(calculator.calculate(loaded.request()));
+        show(calculator.calculate(loaded.request()));
         return true;
+    }
+
+    private boolean onSave() {
+        if (lastResult == null) {
+            view.showError("belum ada hasil untuk disimpan — jalankan hitung atau load dulu");
+            return continueAfterError();
+        }
+        try {
+            final Sheet saved = ask("Nama Sheet [" + sheets.nextDefaultName() + "]: ",
+                    raw -> sheets.save(raw, lastResult));
+            view.showMessage("(sheet \"" + saved.name() + "\" tersimpan di " + sheets.location() + ")");
+            return true;
+        } catch (final InputAborted e) {
+            return continueAfterError();
+        } catch (final SheetStorageException e) {
+            view.showError(e.getMessage());
+            return continueAfterError();
+        }
+    }
+
+    private boolean onSwitch() {
+        if (sheets.sheets().isEmpty()) {
+            view.showError("belum ada sheet tersimpan — pakai save dulu");
+            return continueAfterError();
+        }
+        view.showMessage("Sheet tersimpan: " + describeSheets());
+        try {
+            final Sheet sheet = ask("Pilih Sheet: ", raw -> announced(raw, sheets.switchTo(raw)));
+            view.showMessage("== Sheet " + sheet.name() + " ==");
+            show(sheet.result());
+            return true;
+        } catch (final InputAborted e) {
+            return continueAfterError();
+        }
+    }
+
+    /** Lists sheet names in tab order, marking the current one with {@code *}. */
+    private String describeSheets() {
+        final Sheet current = sheets.current().orElse(null);
+        final StringJoiner names = new StringJoiner(", ");
+        for (final Sheet sheet : sheets.sheets()) {
+            names.add(sheet.equals(current) ? "*" + sheet.name() : sheet.name());
+        }
+        return names.toString();
+    }
+
+    /** Displays a result and remembers it as the one {@code save} stores. */
+    private void show(final SimulationResult result) {
+        lastResult = result;
+        view.showResult(result);
     }
 
     private boolean onShow() {
@@ -202,13 +263,13 @@ public final class SimulatorController {
     }
 
     /**
-     * Ends one {@code hitung} session early, after the reason was shown to the user.
+     * Ends one prompted command early, after the reason was shown to the user.
      * Control flow only, so it skips the stack trace.
      */
-    private static final class HitungAborted extends RuntimeException {
+    private static final class InputAborted extends RuntimeException {
         private static final long serialVersionUID = 1L;
 
-        HitungAborted() {
+        InputAborted() {
             super(null, null, false, false);
         }
     }

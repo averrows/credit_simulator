@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.List;
 import java.util.Optional;
@@ -20,17 +21,21 @@ import org.junit.jupiter.api.Test;
 import com.bcadigital.creditsimulator.model.LoanRequest;
 import com.bcadigital.creditsimulator.model.Rupiah;
 import com.bcadigital.creditsimulator.model.MenuCommand;
+import com.bcadigital.creditsimulator.model.Sheet;
 import com.bcadigital.creditsimulator.model.SimulationResult;
 import com.bcadigital.creditsimulator.model.VehicleCondition;
 import com.bcadigital.creditsimulator.model.VehicleRatePolicyFactory;
 import com.bcadigital.creditsimulator.model.VehicleType;
 import com.bcadigital.creditsimulator.model.YearlyResult;
+import com.bcadigital.creditsimulator.repository.InMemorySheetRepository;
+import com.bcadigital.creditsimulator.repository.SheetRepository;
 import com.bcadigital.creditsimulator.service.InstallmentCalculator;
 import com.bcadigital.creditsimulator.service.LoadService;
 import com.bcadigital.creditsimulator.service.LoanValidation;
 import com.bcadigital.creditsimulator.service.LoanValidator;
 import com.bcadigital.creditsimulator.service.RemoteLoad;
 import com.bcadigital.creditsimulator.service.RemoteLoader;
+import com.bcadigital.creditsimulator.service.SheetBook;
 import com.bcadigital.creditsimulator.service.SimulationCalculator;
 import com.bcadigital.creditsimulator.view.ConsoleView;
 import com.bcadigital.creditsimulator.view.InputSource;
@@ -63,12 +68,17 @@ class SimulatorControllerTest {
 
         /** Real collaborators, pinned clock, and an unreachable endpoint so load falls back. */
         Harness(final boolean batchMode, final String... lines) {
+            this(new InMemorySheetRepository(), batchMode, lines);
+        }
+
+        Harness(final SheetRepository sheets, final boolean batchMode, final String... lines) {
             final ConsoleView view = new ConsoleView(
                     new QueueInputSource(lines),
                     new PrintStream(captured, true, StandardCharsets.UTF_8));
             final LoanValidation validator = new LoanValidator(PINNED);
             this.controller = new SimulatorController(view, batchMode, validator,
-                    new InstallmentCalculator(new VehicleRatePolicyFactory()), RemoteLoader.withDefaultClient(UNREACHABLE_URL, validator));
+                    new InstallmentCalculator(new VehicleRatePolicyFactory()),
+                    RemoteLoader.withDefaultClient(UNREACHABLE_URL, validator), SheetBook.open(sheets));
         }
 
         String output() {
@@ -258,7 +268,7 @@ class SimulatorControllerTest {
         assertThat(harness.controller.run()).isFalse();
 
         assertThat(harness.output())
-                .contains("Error: file input tidak lengkap untuk hitung")
+                .contains("Error: file input tidak lengkap")
                 .doesNotContain("Suku Bunga");
     }
 
@@ -311,9 +321,91 @@ class SimulatorControllerTest {
         };
         final LoadService loader = () -> new RemoteLoad(request, false);
         final SimulatorController controller =
-                new SimulatorController(view, false, validator, calculator, loader);
+                new SimulatorController(view, false, validator, calculator, loader,
+                        SheetBook.open(new InMemorySheetRepository()));
 
         assertThat(controller.dispatch(MenuCommand.LOAD)).isTrue();
         assertThat(shown).containsExactly(result);
+    }
+
+    private static final String[] MOBIL_HITUNG = {"hitung", "mobil", "baru", "2025", "100000000", "3", "35000000"};
+    private static final String[] MOTOR_HITUNG = {"hitung", "motor", "bekas", "2015", "100000000", "2", "25000000"};
+
+    private static String[] session(final String[]... parts) {
+        return Arrays.stream(parts).flatMap(Arrays::stream).toArray(String[]::new);
+    }
+
+    @Test
+    void shouldSaveAndSwitchSheets_whenInteractive() {
+        final InMemorySheetRepository sheets = new InMemorySheetRepository();
+        final Harness harness = new Harness(sheets, false, session(
+                MOBIL_HITUNG, new String[] {"save", "mobil"},
+                MOTOR_HITUNG, new String[] {"save", ""},
+                new String[] {"switch", "mob", "exit"}));
+
+        assertThat(harness.controller.run()).isTrue();
+        assertThat(sheets.findAll()).extracting(Sheet::name).containsExactly("mobil", "Sheet2");
+        final String output = harness.output();
+        assertThat(output)
+                .contains("(sheet \"mobil\" tersimpan di memori)")
+                .contains("Nama Sheet [Sheet2]: ")
+                .contains("Sheet tersimpan: mobil, *Sheet2")
+                .contains("(otomatis: \"mob\" → mobil)")
+                .contains("== Sheet mobil ==");
+        assertThat(output.substring(output.indexOf("== Sheet mobil ==")))
+                .contains("tahun 1 : Rp. 1,950,000.00/bln , Suku Bunga : 8%");
+    }
+
+    @Test
+    void shouldRefuseSave_whenNothingCalculatedYet() {
+        final Harness harness = new Harness(false, "save", "exit");
+
+        harness.controller.run();
+
+        assertThat(harness.output()).contains("Error: belum ada hasil untuk disimpan");
+    }
+
+    @Test
+    void shouldRefuseSwitch_whenNoSheetsSaved() {
+        final Harness harness = new Harness(true, "switch", "exit");
+
+        assertThat(harness.controller.run()).isFalse();
+        assertThat(harness.output()).contains("Error: belum ada sheet tersimpan");
+    }
+
+    @Test
+    void shouldRepromptName_whenInvalidThenValid() {
+        final Harness harness = new Harness(false, session(MOBIL_HITUNG, new String[] {"save", "a/b", "ok", "exit"}));
+
+        harness.controller.run();
+
+        assertThat(harness.output()).contains("Error: Nama sheet harus").contains("(sheet \"ok\" tersimpan");
+    }
+
+    @Test
+    void shouldReportAndContinue_whenSaveFailsInteractively() {
+        final Harness harness = new Harness(new InMemorySheetRepository().failingSave(), false,
+                session(MOBIL_HITUNG, new String[] {"save", "a", "show", "exit"}));
+
+        assertThat(harness.controller.run()).isTrue();
+        assertThat(harness.output()).contains("Error: disk penuh");
+    }
+
+    @Test
+    void shouldWarnAtStart_whenSavedSheetsUnreadable() {
+        final Harness harness = new Harness(new InMemorySheetRepository().failingFirstFind(), false, "exit");
+
+        harness.controller.run();
+
+        assertThat(harness.output()).startsWith("(peringatan: file rusak");
+    }
+
+    @Test
+    void shouldSaveSheetsFromBatchFile_whenBatchMode() {
+        final InMemorySheetRepository sheets = new InMemorySheetRepository();
+        final Harness harness = new Harness(sheets, true, session(MOBIL_HITUNG, new String[] {"save", "", "exit"}));
+
+        assertThat(harness.controller.run()).isTrue();
+        assertThat(sheets.findAll()).extracting(Sheet::name).containsExactly("Sheet1");
     }
 }

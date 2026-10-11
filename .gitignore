@@ -8,3 +8,5 @@ mock-server/batch_*.txt
 .idea/
 *.iml
 .vscode/
+credit_simulator_sheets.json
+Rumus.xlsx

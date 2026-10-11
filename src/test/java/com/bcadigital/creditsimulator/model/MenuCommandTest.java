@@ -20,7 +20,9 @@ class MenuCommandTest {
         assertThat(MenuCommand.parse("h")).isEqualTo(new Match<>(MenuCommand.HITUNG, true));
         assertThat(MenuCommand.parse("HIT")).isEqualTo(new Match<>(MenuCommand.HITUNG, true));
         assertThat(MenuCommand.parse("lo")).isEqualTo(new Match<>(MenuCommand.LOAD, true));
-        assertThat(MenuCommand.parse("S")).isEqualTo(new Match<>(MenuCommand.SHOW, true));
+        assertThat(MenuCommand.parse("SH")).isEqualTo(new Match<>(MenuCommand.SHOW, true));
+        assertThat(MenuCommand.parse("sa")).isEqualTo(new Match<>(MenuCommand.SAVE, true));
+        assertThat(MenuCommand.parse("sw")).isEqualTo(new Match<>(MenuCommand.SWITCH, true));
         assertThat(MenuCommand.parse("exi")).isEqualTo(new Match<>(MenuCommand.EXIT, true));
         assertThat(MenuCommand.parse("  l  ")).isEqualTo(new Match<>(MenuCommand.LOAD, true));
     }
@@ -49,6 +51,11 @@ class MenuCommandTest {
                 .contains("load")
                 .contains("show")
                 .contains("exit");
+    }
+
+    @Test
+    void shouldNameCandidates_whenPrefixSharedBySCommands() {
+        assertThatThrownBy(() -> MenuCommand.parse("s")).hasMessage("\"s\" ambigu (save atau switch atau show?)");
     }
 
     @Test

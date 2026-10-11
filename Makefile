@@ -34,6 +34,8 @@ tarball: ## Paket submission (.git ikut, build/PDF tidak).
 		--exclude='./target' \
 		--exclude='.DS_Store' \
 		--exclude='TechTest Backend.pdf' \
+		--exclude='Rumus.xlsx' \
+		--exclude='credit_simulator_sheets.json' \
 		--exclude='.idea' \
 		--exclude='.vscode' .
 	@echo "OK: $(TARBALL)"; tar -tzf $(TARBALL) | head -5

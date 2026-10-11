@@ -13,7 +13,7 @@ Mockito, AssertJ.
 ## Build
 
 ```bash
-mvn verify              # compile + 99 test + gate coverage 85%
+mvn verify              # compile + 129 test + gate coverage 85%
 mvn -q -DskipTests package   # cepat, tanpa test
 ```
 
@@ -41,6 +41,8 @@ Contoh sesi interaktif:
 > show
   hitung  - simulasi baru (tanya 6 input berurutan)
   load    - ambil perhitungan tersimpan + tampilkan hasil
+  save    - simpan hasil terakhir sebagai sheet (tersimpan ke file)
+  switch  - pindah ke sheet tersimpan + tampilkan hasilnya
   show    - tampilkan perintah ini
   exit    - keluar
 > hitung
@@ -82,6 +84,33 @@ dicoba langsung: `./credit_simulator file_inputs.txt`.
   yang sudah dibayar dikurangi dulu sebelum tahun berikut dihitung. Semua
   angka `BigDecimal` (pembulatan `HALF_UP` 2 desimal).
 
+## Sheet (save & switch)
+
+`save` menyimpan hasil `hitung`/`load` terakhir sebagai *sheet* bernama;
+`switch` pindah ke sheet lain dan langsung menampilkan hasilnya. Sheet tersimpan
+di `credit_simulator_sheets.json` (folder tempat aplikasi dijalankan), jadi
+masih ada setelah aplikasi ditutup.
+
+```
+> save
+  Nama Sheet [Sheet1]: mobil baru        # kosongkan = nama otomatis Sheet1, Sheet2, …
+  (sheet "mobil baru" tersimpan di credit_simulator_sheets.json)
+> switch
+  Sheet tersimpan: mobil baru, *Sheet2    # * = sheet aktif
+  Pilih Sheet: mob                        # prefix unik cukup
+  (otomatis: "mob" → mobil baru)
+  == Sheet mobil baru ==
+  tahun 1 : Rp. 1,950,000.00/bln , Suku Bunga : 8%
+  ...
+```
+
+- Nama sama (tanpa beda huruf besar/kecil) → sheet lama ditimpa.
+- Nama: 1–31 huruf/angka/spasi/`_`/`-`.
+- Format file = array JSON dengan key yang sama seperti payload web service
+  (+ `name`); jadwal cicilan dihitung ulang saat dibuka.
+- File rusak → peringatan saat start, mulai dengan sheet kosong, `save`
+  berikutnya menimpa file tersebut.
+
 ## Load (perhitungan tersimpan)
 
 `load` GET JSON `{vehicleType, vehicleCondition, vehicleYear, totalLoanAmount,
@@ -106,12 +135,14 @@ URL permanen lain (Beeceptor/dll.): ganti satu baris `DEFAULT_URL` di
 ## Testing & coverage
 
 ```bash
-mvn test     # 99 unit test
+mvn test     # 129 unit test
 mvn verify   # + gate JaCoCo minimal 85% line coverage (sekarang ~90%)
 open target/site/jacoco/index.html   # laporan coverage
 ```
 
-## Struktur (MVC + Factory)
+## Struktur (MVC + Factory + Repository)
+
+Lapisan: `view` ⇄ `controller` → `service` → `repository`, semua lewat interface.
 
 ```
 src/main/java/com/bcadigital/creditsimulator/
@@ -121,12 +152,16 @@ src/main/java/com/bcadigital/creditsimulator/
               RatePolicy per VehicleType (Strategy: SteppedRatePolicy)
               VehicleCondition -> punya aturan tahun minimum & DP minimum
               Choice + ChoiceMatcher (parsing prefix untuk semua enum),
-              MenuCommand, InvalidInputException (+InvalidChoiceException)
+              MenuCommand, Sheet, InvalidInputException (+Choice/SheetName)
   view/       SimulatorView <- ConsoleView, InputSource <- Stream/File  (I/O saja)
   controller/ SimulatorController + CommandHandler (Command pattern)
   service/    LoanValidation <- LoanValidator (+4 exception per field),
               SimulationCalculator <- InstallmentCalculator,
-              LoadService <- RemoteLoader + MiniJson + RemoteLoad
+              LoadService <- RemoteLoader + RemoteLoad,
+              SheetBook (sesi sheet: nama default, sheet aktif, switch prefix)
+  repository/ SheetRepository <- JsonSheetRepository (Repository pattern),
+              SheetStorageException
+  json/       MiniJson (parser JSON datar, dipakai loader & repository)
 ```
 
 Prinsip yang dipakai:
@@ -137,6 +172,9 @@ Prinsip yang dipakai:
   `LoanValidation`, `SimulationCalculator`, `LoadService`; `App` yang merakit.
 - **Value object**: uang selalu `Rupiah` (immutable, tidak bisa negatif), parsing
   `jt`/`rb`/`m` tersimpan di satu tempat.
+- **Repository**: service cuma kenal `SheetRepository` (`findAll`, `save`);
+  format file (JSON) tersembunyi di `JsonSheetRepository`, test pakai versi
+  in-memory.
 - **Error sebagai tipe**: semua input salah turunan `InvalidInputException`;
   pesannya siap tampil, jenis field terbaca dari subclass.
 

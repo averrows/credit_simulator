@@ -5,10 +5,13 @@ import java.time.Clock;
 
 import com.bcadigital.creditsimulator.controller.SimulatorController;
 import com.bcadigital.creditsimulator.model.VehicleRatePolicyFactory;
+import com.bcadigital.creditsimulator.repository.JsonSheetRepository;
 import com.bcadigital.creditsimulator.service.InstallmentCalculator;
 import com.bcadigital.creditsimulator.service.LoanValidation;
 import com.bcadigital.creditsimulator.service.LoanValidator;
 import com.bcadigital.creditsimulator.service.RemoteLoader;
+import com.bcadigital.creditsimulator.service.SheetBook;
+import com.bcadigital.creditsimulator.service.SimulationCalculator;
 import com.bcadigital.creditsimulator.view.ConsoleView;
 import com.bcadigital.creditsimulator.view.FileInputSource;
 import com.bcadigital.creditsimulator.view.StreamInputSource;
@@ -48,9 +51,11 @@ public final class App {
             view = new ConsoleView(new StreamInputSource(System.in), System.out);
         }
         final LoanValidation validator = new LoanValidator(Clock.systemDefaultZone());
-        final boolean ok = new SimulatorController(view, batchMode, validator,
-                new InstallmentCalculator(new VehicleRatePolicyFactory()),
-                RemoteLoader.withDefaultClient(options.apiUrl(), validator)).run();
+        final SimulationCalculator calculator = new InstallmentCalculator(new VehicleRatePolicyFactory());
+        final SheetBook sheets = SheetBook.open(
+                new JsonSheetRepository(Path.of(JsonSheetRepository.DEFAULT_FILE), calculator));
+        final boolean ok = new SimulatorController(view, batchMode, validator, calculator,
+                RemoteLoader.withDefaultClient(options.apiUrl(), validator), sheets).run();
         if (!ok) {
             System.exit(1);
         }

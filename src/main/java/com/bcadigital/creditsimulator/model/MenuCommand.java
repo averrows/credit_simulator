@@ -14,6 +14,10 @@ public enum MenuCommand implements Choice {
     HITUNG("simulasi baru (tanya 6 input berurutan)"),
     /** Fetches a saved calculation from the JSON web service and auto-displays it. */
     LOAD("ambil perhitungan tersimpan + tampilkan hasil"),
+    /** Saves the last result as a named sheet in the sheets file. */
+    SAVE("simpan hasil terakhir sebagai sheet (tersimpan ke file)"),
+    /** Switches to a saved sheet and displays its calculation. */
+    SWITCH("pindah ke sheet tersimpan + tampilkan hasilnya"),
     /** Lists all available commands. */
     SHOW("tampilkan perintah ini"),
     /** Exits the application. */
