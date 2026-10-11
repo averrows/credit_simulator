@@ -1,10 +1,13 @@
 package com.bcadigital.creditsimulator.controller;
 
 import java.time.Clock;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.StringJoiner;
+import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 
 import com.bcadigital.creditsimulator.model.LoanRequest;
@@ -34,6 +37,7 @@ public final class SimulatorController {
     private final LoanValidator validator;
     private final InstallmentCalculator calculator;
     private final RemoteLoader loader;
+    private final Map<MenuCommand, BooleanSupplier> handlers;
 
     /**
      * Creates a controller using the system clock.
@@ -74,6 +78,20 @@ public final class SimulatorController {
         this.validator = new LoanValidator(clock);
         this.calculator = new InstallmentCalculator();
         this.loader = RemoteLoader.withDefaultClient(apiUrl, validator);
+        this.handlers = new EnumMap<>(MenuCommand.class);
+        handlers.put(MenuCommand.HITUNG, () -> {
+            onHitung();
+            return true;
+        });
+        handlers.put(MenuCommand.LOAD, () -> {
+            onLoad();
+            return true;
+        });
+        handlers.put(MenuCommand.SHOW, () -> {
+            view.showMessage(MenuCommand.describeAll());
+            return true;
+        });
+        handlers.put(MenuCommand.EXIT, () -> false);
     }
 
     /**
@@ -125,21 +143,24 @@ public final class SimulatorController {
      */
     boolean dispatch(final MenuCommand command) {
         Objects.requireNonNull(command, "command");
-        return switch (command) {
-            case HITUNG -> {
-                onHitung();
-                yield true;
-            }
-            case LOAD -> {
-                onLoad();
-                yield true;
-            }
-            case SHOW -> {
-                view.showMessage(MenuCommand.describeAll());
-                yield true;
-            }
-            case EXIT -> false;
-        };
+        final BooleanSupplier handler = handlers.get(command);
+        if (handler == null) {
+            throw new IllegalStateException("no handler registered for: " + command);
+        }
+        return handler.getAsBoolean();
+    }
+
+    /**
+     * Registers the handler for a command. Adding a command only adds one
+     * registration — the lookup in {@link #dispatch} never changes.
+     *
+     * @param command the command; never null
+     * @param handler returns false when the loop should stop; never null
+     */
+    void registerHandler(final MenuCommand command, final BooleanSupplier handler) {
+        handlers.put(
+                Objects.requireNonNull(command, "command"),
+                Objects.requireNonNull(handler, "handler"));
     }
 
     private void onHitung() {

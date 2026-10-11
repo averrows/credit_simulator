@@ -45,4 +45,16 @@ class VehicleRateFactoryTest {
 
         assertThat(policy.annualRate(3)).isEqualTo(new BigDecimal("0.086"));
     }
+
+    @Test
+    void shouldUseRegisteredPolicy_whenOverridden() {
+        final RatePolicy stub = year -> new BigDecimal("0.42");
+        VehicleRateFactory.register(VehicleType.MOBIL, () -> stub);
+        try {
+            assertThat(VehicleRateFactory.forType(VehicleType.MOBIL)).isSameAs(stub);
+        } finally {
+            VehicleRateFactory.register(
+                    VehicleType.MOBIL, () -> new SteppedRatePolicy(new BigDecimal("0.08")));
+        }
+    }
 }

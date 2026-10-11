@@ -236,4 +236,12 @@ class SimulatorControllerTest {
         assertThat(harness.controller.dispatch(MenuCommand.EXIT)).isFalse();
         assertThat(harness.controller.dispatch(MenuCommand.SHOW)).isTrue();
     }
+
+    @Test
+    void shouldUseRegisteredHandler_whenOverridden() {
+        final Harness harness = new Harness(false);
+        harness.controller.registerHandler(MenuCommand.SHOW, () -> false);
+
+        assertThat(harness.controller.dispatch(MenuCommand.SHOW)).isFalse();
+    }
 }
