@@ -37,12 +37,15 @@ public final class InstallmentCalculator {
                 BigDecimal.valueOf(request.totalLoanAmount() - request.downPayment());
         final int totalMonths = request.loanTenureYears() * MONTHS_PER_YEAR;
         // Two-arg iterate + limit: next() runs only on years inside the tenor,
-        // so monthsLeft never reaches zero (the 3-arg form eagerly computes one
-        // past the end and would divide by zero there).
+        // so monthsLeft never reaches zero.
         final List<YearlyResult> yearly = Stream
                 .iterate(
-                        YearStep.first(principal, policy, totalMonths),
-                        step -> step.next(policy, totalMonths))
+                        YearStep.of(1, principal, policy.annualRate(1), totalMonths),
+                        prev -> YearStep.of(
+                                prev.year() + 1,
+                                prev.remaining(),
+                                policy.annualRate(prev.year() + 1),
+                                prev.monthsLeft() - MONTHS_PER_YEAR))
                 .limit(request.loanTenureYears())
                 .map(step -> new YearlyResult(step.year(), step.rate(), step.monthly()))
                 .toList();
@@ -50,32 +53,24 @@ public final class InstallmentCalculator {
     }
 
     /**
-     * One computed loan year plus the principal left after its payments.
+     * One computed loan year. Pure math over {@code (basis, rate, monthsLeft)} —
+     * it knows nothing about rate schedules or tenors; the caller derives the rate
+     * per year and counts the months down by 12.
      *
-     * @param year the 1-based loan year
+     * @param year the 1-based loan year (carried for the output)
      * @param rate the rate applied that year
      * @param monthly the monthly installment
      * @param remaining the principal left for the next year
+     * @param monthsLeft the remaining months this slice was spread over
      */
-    private record YearStep(int year, BigDecimal rate, BigDecimal monthly, BigDecimal remaining) {
+    private record YearStep(int year, BigDecimal rate, BigDecimal monthly, BigDecimal remaining, int monthsLeft) {
 
-        static YearStep first(final BigDecimal principal, final RatePolicy policy, final int totalMonths) {
-            return step(1, principal, policy, totalMonths);
-        }
-
-        YearStep next(final RatePolicy policy, final int totalMonths) {
-            return step(year + 1, remaining, policy, totalMonths);
-        }
-
-        private static YearStep step(final int year, final BigDecimal remaining,
-                final RatePolicy policy, final int totalMonths) {
-            final BigDecimal rate = policy.annualRate(year);
-            final BigDecimal yearTotal = remaining.multiply(BigDecimal.ONE.add(rate));
-            final int monthsLeft = totalMonths - (year - 1) * MONTHS_PER_YEAR;
+        static YearStep of(final int year, final BigDecimal basis, final BigDecimal rate, final int monthsLeft) {
+            final BigDecimal yearTotal = basis.multiply(BigDecimal.ONE.add(rate));
             final BigDecimal monthly = yearTotal.divide(
                     BigDecimal.valueOf(monthsLeft), MONEY_SCALE, RoundingMode.HALF_UP);
             return new YearStep(year, rate, monthly,
-                    yearTotal.subtract(monthly.multiply(BigDecimal.valueOf(MONTHS_PER_YEAR))));
+                    yearTotal.subtract(monthly.multiply(BigDecimal.valueOf(MONTHS_PER_YEAR))), monthsLeft);
         }
     }
 }
