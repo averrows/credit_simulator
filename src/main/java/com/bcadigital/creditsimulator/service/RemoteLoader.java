@@ -25,7 +25,7 @@ import com.bcadigital.creditsimulator.model.VehicleType;
  * warns instead of silently substituting. Uses only the JDK HTTP client plus the
  * internal {@code MiniJson} parser, keeping the zero-dependency rule.
  */
-public final class RemoteLoader {
+public final class RemoteLoader implements LoadService {
 
     /** Web-service endpoint from the problem statement. */
     public static final String DEFAULT_URL = "https://run.mocky.io/v3/9108b1da-beec-409e-ae14-e8091955666c";
@@ -42,7 +42,7 @@ public final class RemoteLoader {
 
     private final String url;
     private final HttpClient http;
-    private final LoanValidator validator;
+    private final LoanValidation validator;
 
     /**
      * Creates a loader with an explicit HTTP client (tests inject a stub here).
@@ -51,7 +51,7 @@ public final class RemoteLoader {
      * @param http the HTTP client; never null
      * @param validator the loan validator; never null
      */
-    public RemoteLoader(final String url, final HttpClient http, final LoanValidator validator) {
+    public RemoteLoader(final String url, final HttpClient http, final LoanValidation validator) {
         this.url = Objects.requireNonNull(url, "url");
         this.http = Objects.requireNonNull(http, "http");
         this.validator = Objects.requireNonNull(validator, "validator");
@@ -64,7 +64,7 @@ public final class RemoteLoader {
      * @param validator the loan validator; never null
      * @return the loader, never null
      */
-    public static RemoteLoader withDefaultClient(final String url, final LoanValidator validator) {
+    public static RemoteLoader withDefaultClient(final String url, final LoanValidation validator) {
         final HttpClient http = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .followRedirects(HttpClient.Redirect.NORMAL)
@@ -80,6 +80,7 @@ public final class RemoteLoader {
      *     the rules under the validator's clock (a stale-example programmer error,
      *     not a network problem)
      */
+    @Override
     public RemoteLoad load() {
         final Optional<String> body = fetchBody();
         if (body.isPresent()) {

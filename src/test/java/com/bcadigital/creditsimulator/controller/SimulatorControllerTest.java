@@ -4,19 +4,33 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
+import com.bcadigital.creditsimulator.model.LoanRequest;
 import com.bcadigital.creditsimulator.model.MenuCommand;
+import com.bcadigital.creditsimulator.model.SimulationResult;
+import com.bcadigital.creditsimulator.model.VehicleCondition;
+import com.bcadigital.creditsimulator.model.VehicleType;
+import com.bcadigital.creditsimulator.model.YearlyResult;
+import com.bcadigital.creditsimulator.service.LoadService;
+import com.bcadigital.creditsimulator.service.LoanValidation;
+import com.bcadigital.creditsimulator.service.LoanValidator;
+import com.bcadigital.creditsimulator.service.RemoteLoad;
+import com.bcadigital.creditsimulator.service.SimulationCalculator;
 import com.bcadigital.creditsimulator.view.ConsoleView;
 import com.bcadigital.creditsimulator.view.InputSource;
+import com.bcadigital.creditsimulator.view.SimulatorView;
 
 class SimulatorControllerTest {
 
@@ -243,5 +257,44 @@ class SimulatorControllerTest {
         harness.controller.registerHandler(MenuCommand.SHOW, () -> false);
 
         assertThat(harness.controller.dispatch(MenuCommand.SHOW)).isFalse();
+    }
+
+    @Test
+    void shouldUseInjectedDoubles_whenDispatchLoad() {
+        final LoanRequest request = new LoanRequest(
+                VehicleType.MOTOR, VehicleCondition.BEKAS, 2015, 100_000_000L, 2, 25_000_000L);
+        final SimulationResult result = new SimulationResult(request, List.of(
+                new YearlyResult(1, new BigDecimal("0.09"), new BigDecimal("3406250.00"))));
+        final List<SimulationResult> shown = new ArrayList<>();
+        final SimulatorView view = new SimulatorView() {
+            @Override
+            public String prompt(final String label) {
+                return null;
+            }
+
+            @Override
+            public void showMessage(final String message) {
+            }
+
+            @Override
+            public void showError(final String message) {
+            }
+
+            @Override
+            public void showResult(final SimulationResult value) {
+                shown.add(value);
+            }
+        };
+        final LoanValidation validator = new LoanValidator(PINNED);
+        final SimulationCalculator calculator = req -> {
+            assertThat(req).isEqualTo(request);
+            return result;
+        };
+        final LoadService loader = () -> new RemoteLoad(request, false);
+        final SimulatorController controller =
+                new SimulatorController(view, false, validator, calculator, loader);
+
+        assertThat(controller.dispatch(MenuCommand.LOAD)).isTrue();
+        assertThat(shown).containsExactly(result);
     }
 }

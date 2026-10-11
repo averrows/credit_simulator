@@ -6,8 +6,11 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
+import java.util.function.Function;
+
 import com.bcadigital.creditsimulator.model.LoanRequest;
 import com.bcadigital.creditsimulator.model.SimulationResult;
+import com.bcadigital.creditsimulator.model.VehicleType;
 import com.bcadigital.creditsimulator.model.YearlyResult;
 
 /**
@@ -19,10 +22,28 @@ import com.bcadigital.creditsimulator.model.YearlyResult;
  * 2,25jt/bln; the paid yearly slice is subtracted before year 2 grows the rest at
  * 8,1%, and so on. Monthly values round half-up to cents.
  */
-public final class InstallmentCalculator {
+public final class InstallmentCalculator implements SimulationCalculator {
 
     private static final int MONTHS_PER_YEAR = 12;
     private static final int MONEY_SCALE = 2;
+
+    private final Function<VehicleType, RatePolicy> rates;
+
+    /**
+     * Creates a calculator using {@link VehicleRateFactory} for rate lookup.
+     */
+    public InstallmentCalculator() {
+        this(VehicleRateFactory::forType);
+    }
+
+    /**
+     * Creates a calculator with an explicit rate lookup (tests inject a stub here).
+     *
+     * @param rates resolves the policy for a vehicle kind; never null
+     */
+    public InstallmentCalculator(final Function<VehicleType, RatePolicy> rates) {
+        this.rates = Objects.requireNonNull(rates, "rates");
+    }
 
     /**
      * Calculates the full schedule for a validated request.
@@ -30,9 +51,10 @@ public final class InstallmentCalculator {
      * @param request the validated request; never null
      * @return the per-year schedule, never null
      */
+    @Override
     public SimulationResult calculate(final LoanRequest request) {
         Objects.requireNonNull(request, "request");
-        final RatePolicy policy = VehicleRateFactory.forType(request.vehicleType());
+        final RatePolicy policy = rates.apply(request.vehicleType());
         final BigDecimal principal =
                 BigDecimal.valueOf(request.totalLoanAmount() - request.downPayment());
         final int totalMonths = request.loanTenureYears() * MONTHS_PER_YEAR;

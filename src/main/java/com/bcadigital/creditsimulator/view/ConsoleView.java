@@ -18,7 +18,7 @@ import com.bcadigital.creditsimulator.model.YearlyResult;
  * the controller hands it (including read-only model data), so every decision stays
  * in the controller (the deep module).
  */
-public final class ConsoleView {
+public final class ConsoleView implements SimulatorView {
 
     private final InputSource input;
     private final PrintStream output;
@@ -40,6 +40,7 @@ public final class ConsoleView {
      * @param label the prompt text, printed without a trailing newline
      * @return the entered line, or null on end-of-input
      */
+    @Override
     public String prompt(final String label) {
         output.print(label);
         return input.readLine().orElse(null);
@@ -50,6 +51,7 @@ public final class ConsoleView {
      *
      * @param message the message; never null
      */
+    @Override
     public void showMessage(final String message) {
         output.println(Objects.requireNonNull(message, "message"));
     }
@@ -59,6 +61,7 @@ public final class ConsoleView {
      *
      * @param message the error description; never null
      */
+    @Override
     public void showError(final String message) {
         output.println("Error: " + Objects.requireNonNull(message, "message"));
     }
@@ -69,6 +72,7 @@ public final class ConsoleView {
      *
      * @param result the result; never null
      */
+    @Override
     public void showResult(final SimulationResult result) {
         Objects.requireNonNull(result, "result");
         for (final YearlyResult yearly : result.yearlyResults()) {

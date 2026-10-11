@@ -23,7 +23,7 @@ import com.bcadigital.creditsimulator.model.VehicleType;
  * The clock is injected so tests pin "current year" instead of depending on the wall
  * clock.
  */
-public final class LoanValidator {
+public final class LoanValidator implements LoanValidation {
 
     /** Maximum total loan amount in rupiah (1 miliar). */
     public static final long MAX_TOTAL_LOAN = 1_000_000_000L;

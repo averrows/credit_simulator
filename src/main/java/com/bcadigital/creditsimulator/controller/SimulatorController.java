@@ -17,10 +17,14 @@ import com.bcadigital.creditsimulator.model.VehicleCondition;
 import com.bcadigital.creditsimulator.model.VehicleType;
 import com.bcadigital.creditsimulator.service.InstallmentCalculator;
 import com.bcadigital.creditsimulator.service.InvalidLoanInputException;
+import com.bcadigital.creditsimulator.service.LoadService;
+import com.bcadigital.creditsimulator.service.LoanValidation;
 import com.bcadigital.creditsimulator.service.LoanValidator;
 import com.bcadigital.creditsimulator.service.RemoteLoad;
 import com.bcadigital.creditsimulator.service.RemoteLoader;
+import com.bcadigital.creditsimulator.service.SimulationCalculator;
 import com.bcadigital.creditsimulator.view.ConsoleView;
+import com.bcadigital.creditsimulator.view.SimulatorView;
 
 /**
  * Owns the menu loop: reads commands and dispatches to one handler per command.
@@ -32,11 +36,11 @@ import com.bcadigital.creditsimulator.view.ConsoleView;
  */
 public final class SimulatorController {
 
-    private final ConsoleView view;
+    private final SimulatorView view;
     private final boolean batchMode;
-    private final LoanValidator validator;
-    private final InstallmentCalculator calculator;
-    private final RemoteLoader loader;
+    private final LoanValidation validator;
+    private final SimulationCalculator calculator;
+    private final LoadService loader;
     private final Map<MenuCommand, BooleanSupplier> handlers;
 
     /**
@@ -71,14 +75,44 @@ public final class SimulatorController {
      */
     public SimulatorController(final ConsoleView view, final boolean batchMode,
             final Clock clock, final String apiUrl) {
-        this.view = Objects.requireNonNull(view, "view");
-        this.batchMode = batchMode;
+        Objects.requireNonNull(view, "view");
         Objects.requireNonNull(clock, "clock");
         Objects.requireNonNull(apiUrl, "apiUrl");
-        this.validator = new LoanValidator(clock);
+        final LoanValidation shared = new LoanValidator(clock);
+        this.view = view;
+        this.batchMode = batchMode;
+        this.validator = shared;
         this.calculator = new InstallmentCalculator();
-        this.loader = RemoteLoader.withDefaultClient(apiUrl, validator);
+        this.loader = RemoteLoader.withDefaultClient(apiUrl, shared);
         this.handlers = new EnumMap<>(MenuCommand.class);
+        initHandlers();
+    }
+
+    /**
+     * Creates a controller with injected collaborators (tests inject stubs here).
+     *
+     * <p>This is the primary constructor: production delegates to it with real
+     * implementations, so this class depends on contracts, not concretes.
+     *
+     * @param view renders prompts and results; never null
+     * @param batchMode true for file mode; never re-prompts
+     * @param validator validates loan inputs; never null
+     * @param calculator calculates schedules; never null
+     * @param loader fetches saved calculations; never null
+     */
+    public SimulatorController(final SimulatorView view, final boolean batchMode,
+            final LoanValidation validator, final SimulationCalculator calculator,
+            final LoadService loader) {
+        this.view = Objects.requireNonNull(view, "view");
+        this.batchMode = batchMode;
+        this.validator = Objects.requireNonNull(validator, "validator");
+        this.calculator = Objects.requireNonNull(calculator, "calculator");
+        this.loader = Objects.requireNonNull(loader, "loader");
+        this.handlers = new EnumMap<>(MenuCommand.class);
+        initHandlers();
+    }
+
+    private void initHandlers() {
         handlers.put(MenuCommand.HITUNG, () -> {
             onHitung();
             return true;
