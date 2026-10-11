@@ -283,7 +283,7 @@ class SimulatorControllerTest {
         final LoanRequest request = new LoanRequest(
                 VehicleType.MOTOR, VehicleCondition.BEKAS, 2015, Rupiah.of(100_000_000L), 2, Rupiah.of(25_000_000L));
         final SimulationResult result = new SimulationResult(request, List.of(
-                new YearlyResult(1, new BigDecimal("0.09"), new BigDecimal("3406250.00"))));
+                new YearlyResult(1, new BigDecimal("0.09"), new BigDecimal("75000000"), new BigDecimal("3406250.00"))));
         final List<SimulationResult> shown = new ArrayList<>();
         final SimulatorView view = new SimulatorView() {
             @Override

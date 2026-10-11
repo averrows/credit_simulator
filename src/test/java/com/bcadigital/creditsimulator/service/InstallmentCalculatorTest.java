@@ -61,4 +61,17 @@ class InstallmentCalculatorTest {
         assertThat(result.yearlyResults().get(0).monthlyInstallment()).isEqualByComparingTo("2083333.33");
         assertThat(result.yearlyResults().get(2).annualRate()).isEqualByComparingTo("0");
     }
+
+    @Test
+    void shouldMatchRumusSheetRows_whenThreeYearMobil() {
+        final SimulationResult result = calculator.calculate(rumusCase());
+
+        assertThat(result.yearlyResults().get(0).principal()).isEqualByComparingTo("75000000");
+        assertThat(result.yearlyResults().get(0).totalWithInterest()).isEqualByComparingTo("81000000");
+        assertThat(result.yearlyResults().get(0).yearlyInstallment()).isEqualByComparingTo("27000000");
+        assertThat(result.yearlyResults().get(1).principal()).isEqualByComparingTo("54000000");
+        assertThat(result.yearlyResults().get(2).principal()).isEqualByComparingTo("29187000");
+        assertThat(result.yearlyResults().get(2).totalWithInterest()).isEqualByComparingTo("31697082");
+        assertThat(result.averageMonthlyInstallment()).isEqualByComparingTo("2441224.50");
+    }
 }
