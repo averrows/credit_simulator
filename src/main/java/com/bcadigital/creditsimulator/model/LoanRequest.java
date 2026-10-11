@@ -3,10 +3,10 @@ package com.bcadigital.creditsimulator.model;
 import java.util.Objects;
 
 /**
- * A validated vehicle-loan request, ready for calculation.
+ * A vehicle-loan request, ready for calculation.
  *
- * <p>Deliberately dumb: the record performs no rule checks itself. All Rules of the
- * Game live in {@code LoanValidator}, so there is exactly one place to change them.
+ * <p>The record performs no rule checks itself: input rules live in
+ * {@code LoanValidator} and per-condition limits in {@link VehicleCondition}.
  * Constructing this record directly (e.g. in tests) bypasses validation.
  *
  * @param vehicleType the vehicle kind; never null
@@ -26,10 +26,19 @@ public record LoanRequest(
         long downPayment) {
 
     /**
-     * Creates a validated loan request.
+     * Creates a loan request without validating the amounts.
      */
     public LoanRequest {
         Objects.requireNonNull(vehicleType, "vehicleType");
         Objects.requireNonNull(vehicleCondition, "vehicleCondition");
+    }
+
+    /**
+     * Returns the amount actually financed.
+     *
+     * @return the total loan amount minus the down payment, in rupiah
+     */
+    public long principal() {
+        return totalLoanAmount - downPayment;
     }
 }

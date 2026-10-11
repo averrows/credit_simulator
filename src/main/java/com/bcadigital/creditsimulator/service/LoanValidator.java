@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.OptionalInt;
 import java.util.function.Supplier;
 
 import com.bcadigital.creditsimulator.model.LoanRequest;
@@ -33,9 +34,6 @@ public final class LoanValidator implements LoanValidation {
 
     /** Maximum loan tenure in years (Rule 2). */
     public static final int MAX_TENURE_YEARS = 6;
-
-    private static final int NEW_VEHICLE_MIN_DP_PERCENT = 35;
-    private static final int USED_VEHICLE_MIN_DP_PERCENT = 25;
 
     /** Rupiah multiplier per amount suffix. */
     private static final Map<String, Long> SUFFIX_MULTIPLIERS = Map.of(
@@ -112,10 +110,10 @@ public final class LoanValidator implements LoanValidation {
             throw new InvalidYearException("Tahun kendaraan harus 4 digit angka, contoh: 2025");
         }
         final int year = Integer.parseInt(digits);
-        final int minYear = Year.now(clock).getValue() - 1;
-        if (condition == VehicleCondition.BARU && year < minYear) {
+        final OptionalInt minYear = condition.minimumYear(Year.now(clock).getValue());
+        if (minYear.isPresent() && year < minYear.getAsInt()) {
             throw new InvalidYearException(
-                    "Kendaraan baru: tahun minimal " + minYear + " (tahun ini - 1)");
+                    "Kendaraan " + condition.key() + ": tahun minimal " + minYear.getAsInt());
         }
         return year;
     }
@@ -172,12 +170,9 @@ public final class LoanValidator implements LoanValidation {
         if (downPayment >= total) {
             throw new InvalidDownPaymentException("DP harus kurang dari jumlah pinjaman");
         }
-        final int requiredPercent = condition == VehicleCondition.BARU
-                ? NEW_VEHICLE_MIN_DP_PERCENT
-                : USED_VEHICLE_MIN_DP_PERCENT;
-        if (downPayment * 100 < (long) requiredPercent * total) {
-            throw new InvalidDownPaymentException(
-                    "DP minimal " + requiredPercent + "% dari pinjaman (kondisi " + condition.displayName() + ")");
+        if (!condition.meetsMinimumDownPayment(downPayment, total)) {
+            throw new InvalidDownPaymentException("DP minimal " + condition.minDownPaymentPercent()
+                    + "% dari pinjaman (kondisi " + condition.displayName() + ")");
         }
         return downPayment;
     }

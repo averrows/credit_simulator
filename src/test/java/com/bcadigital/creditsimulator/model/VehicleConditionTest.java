@@ -33,4 +33,27 @@ class VehicleConditionTest {
     void shouldNameBothCandidates_whenSharedPrefix() {
         assertThatThrownBy(() -> VehicleCondition.parse("b")).hasMessage("\"b\" ambigu (Baru atau Bekas?)");
     }
+
+    @Test
+    void shouldRequireLastYearOrNewer_whenBaru() {
+        assertThat(VehicleCondition.BARU.minimumYear(2026)).hasValue(2025);
+    }
+
+    @Test
+    void shouldAcceptAnyYear_whenBekas() {
+        assertThat(VehicleCondition.BEKAS.minimumYear(2026)).isEmpty();
+    }
+
+    @Test
+    void shouldApplyOwnPercentage_whenCheckingDownPayment() {
+        assertThat(VehicleCondition.BARU.meetsMinimumDownPayment(35, 100)).isTrue();
+        assertThat(VehicleCondition.BARU.meetsMinimumDownPayment(34, 100)).isFalse();
+        assertThat(VehicleCondition.BEKAS.meetsMinimumDownPayment(25, 100)).isTrue();
+        assertThat(VehicleCondition.BEKAS.meetsMinimumDownPayment(24, 100)).isFalse();
+    }
+
+    @Test
+    void shouldNotOverflow_whenTotalIsMaximumLoan() {
+        assertThat(VehicleCondition.BARU.meetsMinimumDownPayment(350_000_000L, 1_000_000_000L)).isTrue();
+    }
 }
