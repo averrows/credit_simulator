@@ -4,13 +4,18 @@ import java.nio.file.Path;
 import java.time.Clock;
 
 import com.bcadigital.creditsimulator.controller.SimulatorController;
+import com.bcadigital.creditsimulator.service.InstallmentCalculator;
+import com.bcadigital.creditsimulator.service.LoanValidation;
+import com.bcadigital.creditsimulator.service.LoanValidator;
+import com.bcadigital.creditsimulator.service.RemoteLoader;
 import com.bcadigital.creditsimulator.view.ConsoleView;
 import com.bcadigital.creditsimulator.view.FileInputSource;
 import com.bcadigital.creditsimulator.view.StreamInputSource;
 
 /**
- * Entry point. Decides the input source once (keyboard vs. batch file), wires the
- * MVC trio, and hands over to the controller with a single {@code run()} call.
+ * Entry point and composition root: the only place that names concrete classes.
+ * Decides the input source once (keyboard vs. batch file), wires the MVC trio
+ * against their interfaces, and hands over to the controller with one {@code run()}.
  *
  * <p>Usage: {@code credit_simulator} (interactive) or
  * {@code credit_simulator file_inputs.txt} (batch), with optional
@@ -39,6 +44,8 @@ public final class App {
         } else {
             view = new ConsoleView(new StreamInputSource(System.in), System.out);
         }
-        new SimulatorController(view, batchMode, Clock.systemDefaultZone(), options.apiUrl()).run();
+        final LoanValidation validator = new LoanValidator(Clock.systemDefaultZone());
+        new SimulatorController(view, batchMode, validator, new InstallmentCalculator(),
+                RemoteLoader.withDefaultClient(options.apiUrl(), validator)).run();
     }
 }

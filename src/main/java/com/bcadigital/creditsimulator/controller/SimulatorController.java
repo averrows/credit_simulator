@@ -1,13 +1,10 @@
 package com.bcadigital.creditsimulator.controller;
 
-import java.time.Clock;
-import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.StringJoiner;
-import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 
 import com.bcadigital.creditsimulator.model.LoanRequest;
@@ -15,24 +12,20 @@ import com.bcadigital.creditsimulator.model.Match;
 import com.bcadigital.creditsimulator.model.MenuCommand;
 import com.bcadigital.creditsimulator.model.VehicleCondition;
 import com.bcadigital.creditsimulator.model.VehicleType;
-import com.bcadigital.creditsimulator.service.InstallmentCalculator;
 import com.bcadigital.creditsimulator.service.InvalidLoanInputException;
 import com.bcadigital.creditsimulator.service.LoadService;
 import com.bcadigital.creditsimulator.service.LoanValidation;
-import com.bcadigital.creditsimulator.service.LoanValidator;
 import com.bcadigital.creditsimulator.service.RemoteLoad;
-import com.bcadigital.creditsimulator.service.RemoteLoader;
 import com.bcadigital.creditsimulator.service.SimulationCalculator;
-import com.bcadigital.creditsimulator.view.ConsoleView;
 import com.bcadigital.creditsimulator.view.SimulatorView;
 
 /**
- * Owns the menu loop: reads commands and dispatches to one handler per command.
+ * Owns the menu loop: reads commands and dispatches each to its {@link CommandHandler}.
  *
  * <p>This is the deep module of the MVC trio: callers make a single {@link #run()}
  * call while the controller hides the whole session (prompting, validation retry,
- * dispatch, unknown command recovery, end-of-input handling). The web-service loader
- * will be plugged into {@code onLoad()} in a later unit.
+ * dispatch, unknown command recovery, end-of-input handling). It depends only on
+ * interfaces; {@code App} is the composition root that picks the implementations.
  */
 public final class SimulatorController {
 
@@ -41,61 +34,14 @@ public final class SimulatorController {
     private final LoanValidation validator;
     private final SimulationCalculator calculator;
     private final LoadService loader;
-    private final Map<MenuCommand, BooleanSupplier> handlers;
+    private final Map<MenuCommand, CommandHandler> handlers;
 
     /**
-     * Creates a controller using the system clock.
-     *
-     * @param view the console view; never null
-     * @param batchMode true when input comes from a file (validation failures abort
-     *     instead of re-prompting, since nobody is there to retype)
-     */
-    public SimulatorController(final ConsoleView view, final boolean batchMode) {
-        this(view, batchMode, Clock.systemDefaultZone());
-    }
-
-    /**
-     * Creates a controller with an explicit clock (tests pin "current year" here).
-     *
-     * @param view the console view; never null
-     * @param batchMode true for file mode; never re-prompts
-     * @param clock the clock for year validation; never null
-     */
-    SimulatorController(final ConsoleView view, final boolean batchMode, final Clock clock) {
-        this(view, batchMode, clock, RemoteLoader.DEFAULT_URL);
-    }
-
-    /**
-     * Creates a controller with an explicit clock and API endpoint (tests pin both here).
-     *
-     * @param view the console view; never null
-     * @param batchMode true for file mode; never re-prompts
-     * @param clock the clock for year validation; never null
-     * @param apiUrl the web-service endpoint for {@code load}; never null
-     */
-    public SimulatorController(final ConsoleView view, final boolean batchMode,
-            final Clock clock, final String apiUrl) {
-        Objects.requireNonNull(view, "view");
-        Objects.requireNonNull(clock, "clock");
-        Objects.requireNonNull(apiUrl, "apiUrl");
-        final LoanValidation shared = new LoanValidator(clock);
-        this.view = view;
-        this.batchMode = batchMode;
-        this.validator = shared;
-        this.calculator = new InstallmentCalculator();
-        this.loader = RemoteLoader.withDefaultClient(apiUrl, shared);
-        this.handlers = new EnumMap<>(MenuCommand.class);
-        initHandlers();
-    }
-
-    /**
-     * Creates a controller with injected collaborators (tests inject stubs here).
-     *
-     * <p>This is the primary constructor: production delegates to it with real
-     * implementations, so this class depends on contracts, not concretes.
+     * Creates a controller over the given collaborators.
      *
      * @param view renders prompts and results; never null
-     * @param batchMode true for file mode; never re-prompts
+     * @param batchMode true when input comes from a file: validation failures abort
+     *     instead of re-prompting, since nobody is there to retype
      * @param validator validates loan inputs; never null
      * @param calculator calculates schedules; never null
      * @param loader fetches saved calculations; never null
@@ -108,24 +54,14 @@ public final class SimulatorController {
         this.validator = Objects.requireNonNull(validator, "validator");
         this.calculator = Objects.requireNonNull(calculator, "calculator");
         this.loader = Objects.requireNonNull(loader, "loader");
-        this.handlers = new EnumMap<>(MenuCommand.class);
-        initHandlers();
-    }
-
-    private void initHandlers() {
-        handlers.put(MenuCommand.HITUNG, () -> {
-            onHitung();
-            return true;
-        });
-        handlers.put(MenuCommand.LOAD, () -> {
-            onLoad();
-            return true;
-        });
-        handlers.put(MenuCommand.SHOW, () -> {
-            view.showMessage(MenuCommand.describeAll());
-            return true;
-        });
-        handlers.put(MenuCommand.EXIT, () -> false);
+        this.handlers = Map.of(
+                MenuCommand.HITUNG, this::onHitung,
+                MenuCommand.LOAD, this::onLoad,
+                MenuCommand.SHOW, this::onShow,
+                MenuCommand.EXIT, () -> false);
+        if (handlers.size() != MenuCommand.values().length) {
+            throw new IllegalStateException("every MenuCommand needs a handler");
+        }
     }
 
     /**
@@ -176,57 +112,40 @@ public final class SimulatorController {
      * @return false when the loop should stop, true otherwise
      */
     boolean dispatch(final MenuCommand command) {
-        Objects.requireNonNull(command, "command");
-        final BooleanSupplier handler = handlers.get(command);
-        if (handler == null) {
-            throw new IllegalStateException("no handler registered for: " + command);
-        }
-        return handler.getAsBoolean();
+        return handlers.get(Objects.requireNonNull(command, "command")).execute();
     }
 
-    /**
-     * Registers the handler for a command. Adding a command only adds one
-     * registration — the lookup in {@link #dispatch} never changes.
-     *
-     * @param command the command; never null
-     * @param handler returns false when the loop should stop; never null
-     */
-    void registerHandler(final MenuCommand command, final BooleanSupplier handler) {
-        handlers.put(
-                Objects.requireNonNull(command, "command"),
-                Objects.requireNonNull(handler, "handler"));
-    }
-
-    private void onHitung() {
+    private boolean onHitung() {
         final VehicleType type = promptChoice("Jenis Kendaraan [Mobil|Motor]: ",
                 VehicleType::parse, VehicleType::candidates, VehicleType::displayName);
         if (type == null) {
-            return;
+            return true;
         }
         final VehicleCondition condition = promptChoice("Kondisi [Baru|Bekas]: ",
                 VehicleCondition::parse, VehicleCondition::candidates, VehicleCondition::displayName);
         if (condition == null) {
-            return;
+            return true;
         }
         final Integer year = promptValidated("Tahun Kendaraan [YYYY]: ",
                 raw -> validator.parseYear(raw, condition));
         if (year == null) {
-            return;
+            return true;
         }
         final Long total = promptValidated("Jumlah Pinjaman Total: ", validator::parseTotal);
         if (total == null) {
-            return;
+            return true;
         }
         final Integer tenor = promptValidated("Tenor Pinjaman (1-6 thn): ", validator::parseTenor);
         if (tenor == null) {
-            return;
+            return true;
         }
         final Long downPayment = promptValidated("Jumlah DP: ",
                 raw -> validator.parseDownPayment(raw, condition, total));
         if (downPayment == null) {
-            return;
+            return true;
         }
         view.showResult(calculator.calculate(new LoanRequest(type, condition, year, total, tenor, downPayment)));
+        return true;
     }
 
     /**
@@ -303,11 +222,17 @@ public final class SimulatorController {
         }
     }
 
-    private void onLoad() {
+    private boolean onLoad() {
         final RemoteLoad loaded = loader.load();
         if (loaded.fallbackUsed()) {
             view.showMessage("(peringatan: web service tidak dapat dihubungi — memakai contoh bawaan)");
         }
         view.showResult(calculator.calculate(loaded.request()));
+        return true;
+    }
+
+    private boolean onShow() {
+        view.showMessage(MenuCommand.describeAll());
+        return true;
     }
 }

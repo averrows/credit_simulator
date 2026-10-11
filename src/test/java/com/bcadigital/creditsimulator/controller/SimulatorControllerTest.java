@@ -23,10 +23,12 @@ import com.bcadigital.creditsimulator.model.SimulationResult;
 import com.bcadigital.creditsimulator.model.VehicleCondition;
 import com.bcadigital.creditsimulator.model.VehicleType;
 import com.bcadigital.creditsimulator.model.YearlyResult;
+import com.bcadigital.creditsimulator.service.InstallmentCalculator;
 import com.bcadigital.creditsimulator.service.LoadService;
 import com.bcadigital.creditsimulator.service.LoanValidation;
 import com.bcadigital.creditsimulator.service.LoanValidator;
 import com.bcadigital.creditsimulator.service.RemoteLoad;
+import com.bcadigital.creditsimulator.service.RemoteLoader;
 import com.bcadigital.creditsimulator.service.SimulationCalculator;
 import com.bcadigital.creditsimulator.view.ConsoleView;
 import com.bcadigital.creditsimulator.view.InputSource;
@@ -35,6 +37,7 @@ import com.bcadigital.creditsimulator.view.SimulatorView;
 class SimulatorControllerTest {
 
     private static final Clock PINNED = Clock.fixed(Instant.parse("2026-06-01T00:00:00Z"), ZoneOffset.UTC);
+    private static final String UNREACHABLE_URL = "http://[::1";
 
     private static final class QueueInputSource implements InputSource {
         private final Deque<String> lines;
@@ -56,18 +59,14 @@ class SimulatorControllerTest {
         final ByteArrayOutputStream captured = new ByteArrayOutputStream();
         final SimulatorController controller;
 
+        /** Real collaborators, pinned clock, and an unreachable endpoint so load falls back. */
         Harness(final boolean batchMode, final String... lines) {
             final ConsoleView view = new ConsoleView(
                     new QueueInputSource(lines),
                     new PrintStream(captured, true, StandardCharsets.UTF_8));
-            this.controller = new SimulatorController(view, batchMode);
-        }
-
-        Harness(final boolean batchMode, final Clock clock, final String apiUrl, final String... lines) {
-            final ConsoleView view = new ConsoleView(
-                    new QueueInputSource(lines),
-                    new PrintStream(captured, true, StandardCharsets.UTF_8));
-            this.controller = new SimulatorController(view, batchMode, clock, apiUrl);
+            final LoanValidation validator = new LoanValidator(PINNED);
+            this.controller = new SimulatorController(view, batchMode, validator,
+                    new InstallmentCalculator(), RemoteLoader.withDefaultClient(UNREACHABLE_URL, validator));
         }
 
         String output() {
@@ -135,7 +134,7 @@ class SimulatorControllerTest {
 
     @Test
     void shouldCalculate_whenFullHitungSession() {
-        final Harness harness = new Harness(false, PINNED, "http://[::1",
+        final Harness harness = new Harness(false,
                 "hitung", "mobil", "baru", "2025", "100000000", "3", "35000000", "exit");
 
         harness.controller.run();
@@ -148,7 +147,7 @@ class SimulatorControllerTest {
 
     @Test
     void shouldCalculate_whenMoneySuffixes() {
-        final Harness harness = new Harness(false, PINNED, "http://[::1",
+        final Harness harness = new Harness(false,
                 "hitung", "mobil", "baru", "2025", "100 jt", "3", "35 jt", "exit");
 
         harness.controller.run();
@@ -158,7 +157,7 @@ class SimulatorControllerTest {
 
     @Test
     void shouldAssumeOptions_whenUniquePrefixes() {
-        final Harness harness = new Harness(false, PINNED, "http://[::1",
+        final Harness harness = new Harness(false,
                 "hitung", "mot", "bek", "2015", "100000000", "2", "25000000", "exit");
 
         harness.controller.run();
@@ -172,7 +171,7 @@ class SimulatorControllerTest {
 
     @Test
     void shouldRepromptField_whenYearInvalid() {
-        final Harness harness = new Harness(false, PINNED, "http://[::1",
+        final Harness harness = new Harness(false,
                 "hitung", "mobil", "baru", "2020", "2025", "100000000", "3", "35000000", "exit");
 
         harness.controller.run();
@@ -182,7 +181,7 @@ class SimulatorControllerTest {
 
     @Test
     void shouldRejectImmediately_whenYearNotFourDigits() {
-        final Harness harness = new Harness(false, PINNED, "http://[::1",
+        final Harness harness = new Harness(false,
                 "hitung", "mobil", "baru", "2", "2025", "100000000", "3", "35000000", "exit");
 
         harness.controller.run();
@@ -194,7 +193,7 @@ class SimulatorControllerTest {
 
     @Test
     void shouldReportAmbiguity_whenSharedPrefix() {
-        final Harness harness = new Harness(false, PINNED, "http://[::1",
+        final Harness harness = new Harness(false,
                 "hitung", "mo", "mobil", "bekas", "2015", "100000000", "2", "25000000", "exit");
 
         harness.controller.run();
@@ -206,7 +205,7 @@ class SimulatorControllerTest {
 
     @Test
     void shouldAbort_whenInvalidInputInBatchMode() {
-        final Harness harness = new Harness(true, PINNED, "http://[::1",
+        final Harness harness = new Harness(true,
                 "hitung", "mobil", "baru", "2020", "2025", "100000000", "3", "35000000", "exit");
 
         harness.controller.run();
@@ -217,7 +216,7 @@ class SimulatorControllerTest {
 
     @Test
     void shouldWarnAndCalculateFallback_whenLoadFails() {
-        final Harness harness = new Harness(false, PINNED, "http://[::1", "load", "exit");
+        final Harness harness = new Harness(false, "load", "exit");
 
         harness.controller.run();
 
@@ -229,7 +228,7 @@ class SimulatorControllerTest {
 
     @Test
     void shouldAbortHitung_whenEndOfInput() {
-        final Harness harness = new Harness(false, PINNED, "http://[::1");
+        final Harness harness = new Harness(false);
 
         assertThat(harness.controller.dispatch(MenuCommand.HITUNG)).isTrue();
         assertThat(harness.output()).contains("Jenis Kendaraan");
@@ -237,7 +236,7 @@ class SimulatorControllerTest {
 
     @Test
     void shouldCalculateFallback_whenDispatchLoad() {
-        final Harness harness = new Harness(false, PINNED, "http://[::1");
+        final Harness harness = new Harness(false);
 
         assertThat(harness.controller.dispatch(MenuCommand.LOAD)).isTrue();
         assertThat(harness.output()).contains("(peringatan:").contains("tahun 6 :");
@@ -249,14 +248,6 @@ class SimulatorControllerTest {
 
         assertThat(harness.controller.dispatch(MenuCommand.EXIT)).isFalse();
         assertThat(harness.controller.dispatch(MenuCommand.SHOW)).isTrue();
-    }
-
-    @Test
-    void shouldUseRegisteredHandler_whenOverridden() {
-        final Harness harness = new Harness(false);
-        harness.controller.registerHandler(MenuCommand.SHOW, () -> false);
-
-        assertThat(harness.controller.dispatch(MenuCommand.SHOW)).isFalse();
     }
 
     @Test
