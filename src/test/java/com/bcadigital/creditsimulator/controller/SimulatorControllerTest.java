@@ -119,7 +119,7 @@ class SimulatorControllerTest {
     void shouldAbort_whenUnknownCommandInBatchMode() {
         final Harness harness = new Harness(true, "ngawur", "show", "exit");
 
-        harness.controller.run();
+        assertThat(harness.controller.run()).isFalse();
 
         assertThat(harness.output()).contains("Error:");
         assertThat(harness.output()).doesNotContain("Suku Bunga");
@@ -210,10 +210,25 @@ class SimulatorControllerTest {
         final Harness harness = new Harness(true,
                 "hitung", "mobil", "baru", "2020", "2025", "100000000", "3", "35000000", "exit");
 
-        harness.controller.run();
-
-        assertThat(harness.output()).contains("Error:");
+        assertThat(harness.controller.run()).isFalse();
         assertThat(harness.output()).doesNotContain("Suku Bunga");
+        assertThat(harness.output()).as("stops before misreading later lines as commands")
+                .doesNotContain("perintah tidak dikenal");
+    }
+
+    @Test
+    void shouldReportSuccess_whenBatchCompletes() {
+        final Harness harness = new Harness(true,
+                "hitung", "mobil", "baru", "2025", "100000000", "3", "35000000", "exit");
+
+        assertThat(harness.controller.run()).isTrue();
+    }
+
+    @Test
+    void shouldReportSuccess_whenInteractiveInputHadErrors() {
+        final Harness harness = new Harness(false, "ngawur", "exit");
+
+        assertThat(harness.controller.run()).isTrue();
     }
 
     @Test
@@ -240,7 +255,7 @@ class SimulatorControllerTest {
     void shouldReportIncompleteFile_whenBatchEndsMidHitung() {
         final Harness harness = new Harness(true, "hitung", "mobil", "baru", "2025");
 
-        harness.controller.run();
+        assertThat(harness.controller.run()).isFalse();
 
         assertThat(harness.output())
                 .contains("Error: file input tidak lengkap untuk hitung")

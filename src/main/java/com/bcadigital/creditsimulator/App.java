@@ -30,6 +30,8 @@ public final class App {
     /**
      * Application entry point.
      *
+     * <p>Exits with status 1 when a batch file contains invalid or incomplete input.
+     *
      * @param args zero arguments for interactive mode, or one batch-file path
      */
     public static void main(final String[] args) {
@@ -46,7 +48,11 @@ public final class App {
             view = new ConsoleView(new StreamInputSource(System.in), System.out);
         }
         final LoanValidation validator = new LoanValidator(Clock.systemDefaultZone());
-        new SimulatorController(view, batchMode, validator, new InstallmentCalculator(new VehicleRatePolicyFactory()),
+        final boolean ok = new SimulatorController(view, batchMode, validator,
+                new InstallmentCalculator(new VehicleRatePolicyFactory()),
                 RemoteLoader.withDefaultClient(options.apiUrl(), validator)).run();
+        if (!ok) {
+            System.exit(1);
+        }
     }
 }

@@ -35,6 +35,7 @@ public final class SimulatorController {
     private final SimulationCalculator calculator;
     private final LoadService loader;
     private final Map<MenuCommand, CommandHandler> handlers;
+    private boolean batchFailed;
 
     /**
      * Creates a controller over the given collaborators.
@@ -65,23 +66,22 @@ public final class SimulatorController {
     }
 
     /**
-     * Runs the menu loop until {@code exit} or end-of-input.
+     * Runs the menu loop until {@code exit}, end-of-input, or the first error in
+     * batch mode (nobody is there to retype, and later lines would be misread).
      *
      * <p>Lists the available commands first, so users immediately see what they
      * can do without guessing or typing {@code show}.
+     *
+     * @return true when the session ended normally; false when batch input was
+     *     invalid or incomplete, so the caller can exit with a failure status
      */
-    public void run() {
+    public boolean run() {
         view.showMessage(MenuCommand.describeAll());
-        while (true) {
-            final String raw = view.prompt("> ");
-            if (raw == null) {
-                return;
-            }
-            final boolean keepGoing = handleLine(raw);
-            if (!keepGoing) {
-                return;
-            }
+        String raw = view.prompt("> ");
+        while (raw != null && handleLine(raw)) {
+            raw = view.prompt("> ");
         }
+        return !batchFailed;
     }
 
     /**
@@ -98,7 +98,7 @@ public final class SimulatorController {
         } catch (final InvalidChoiceException e) {
             view.showError(e.getMessage());
             view.showMessage(MenuCommand.describeAll());
-            return !batchMode;
+            return continueAfterError();
         }
         return dispatch(command);
     }
@@ -127,9 +127,23 @@ public final class SimulatorController {
             view.showResult(calculator.calculate(
                     new LoanRequest(type, condition, year, total, tenor, downPayment)));
         } catch (final HitungAborted e) {
-            // The reason was already shown to the user; the session returns to the menu.
+            // The reason was already shown to the user.
+            return continueAfterError();
         }
         return true;
+    }
+
+    /**
+     * Decides what happens after a user error was reported: interactive sessions
+     * return to the menu, batch sessions stop and remember the failure.
+     *
+     * @return true to keep the menu loop running
+     */
+    private boolean continueAfterError() {
+        if (batchMode) {
+            batchFailed = true;
+        }
+        return !batchMode;
     }
 
     /**
