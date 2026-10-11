@@ -1,4 +1,4 @@
-package com.bcadigital.creditsimulator.service;
+package com.bcadigital.creditsimulator.model;
 
 import java.math.BigDecimal;
 import java.util.Objects;
@@ -8,8 +8,8 @@ import java.util.Objects;
  *
  * <p>Year 1 uses the base rate. Each following year adds 0,1% on even years and
  * 0,5% on odd years (8% → 8,1% → 8,6% → 8,7% …), which is the only reading of
- * Rules 7-8 consistent with the Rumus sample. Created via
- * {@link VehicleRateFactory}, never directly.
+ * Rules 7-8 consistent with the Rumus sample. Each {@link VehicleType} creates
+ * its own instance with its base rate (Rule 9).
  */
 final class SteppedRatePolicy implements RatePolicy {
 

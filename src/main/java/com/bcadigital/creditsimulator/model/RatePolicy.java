@@ -1,9 +1,12 @@
-package com.bcadigital.creditsimulator.service;
+package com.bcadigital.creditsimulator.model;
 
 import java.math.BigDecimal;
 
 /**
- * Annual interest-rate schedule for one vehicle kind.
+ * Annual interest-rate schedule for one vehicle kind (Strategy pattern).
+ *
+ * <p>Each {@link VehicleType} owns one policy, so the calculator asks the vehicle
+ * for its rates instead of branching on which vehicle it is.
  */
 public interface RatePolicy {
 
