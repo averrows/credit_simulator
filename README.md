@@ -13,9 +13,12 @@ Mockito, AssertJ.
 ## Build
 
 ```bash
-mvn verify              # compile + 65 test + gate coverage 85%
+mvn verify              # compile + 71 test + gate coverage 85%
 mvn -q -DskipTests package   # cepat, tanpa test
 ```
+
+Shortcut sama via Make (`make help` untuk daftar): `make verify`, `make run`,
+`make run-file`, `make mock` + `make run-remote`, `make tarball`, `make clean`.
 
 Hasil: `target/credit-simulator-*.jar` (tidak di-commit, lihat `.gitignore`).
 
@@ -100,7 +103,7 @@ URL permanen lain (Beeceptor/dll.): ganti satu baris `DEFAULT_URL` di
 ## Testing & coverage
 
 ```bash
-mvn test     # 65 test: mvn test saja
+mvn test     # 71 unit test
 mvn verify   # + gate JaCoCo minimal 85% line coverage (sekarang ~90%)
 open target/site/jacoco/index.html   # laporan coverage
 ```
