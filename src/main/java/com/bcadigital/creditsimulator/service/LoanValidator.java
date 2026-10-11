@@ -4,7 +4,6 @@ import java.time.Clock;
 import java.time.Year;
 import java.util.Objects;
 import java.util.OptionalInt;
-import java.util.function.Supplier;
 
 import com.bcadigital.creditsimulator.model.LoanRequest;
 import com.bcadigital.creditsimulator.model.Rupiah;
@@ -89,12 +88,10 @@ public final class LoanValidator implements LoanValidation {
      */
     @Override
     public int parseYear(final String raw, final VehicleCondition condition) {
-        final String digits = requireDigits(raw,
-                () -> new InvalidYearException("Tahun kendaraan harus 4 digit angka, contoh: 2025"));
-        if (digits.length() != 4) {
+        if (raw == null || !raw.trim().matches("\\d{4}")) {
             throw new InvalidYearException("Tahun kendaraan harus 4 digit angka, contoh: 2025");
         }
-        final int year = Integer.parseInt(digits);
+        final int year = Integer.parseInt(raw.trim());
         final OptionalInt minYear = condition.minimumYear(Year.now(clock).getValue());
         if (minYear.isPresent() && year < minYear.getAsInt()) {
             throw new InvalidYearException(
@@ -129,14 +126,16 @@ public final class LoanValidator implements LoanValidation {
      */
     @Override
     public int parseTenor(final String raw) {
-        final String digits = requireDigits(raw,
-                () -> new InvalidTenorException("Tenor harus angka 1 sampai 6 (tahun)"));
-        final long tenor = parseLong(digits,
-                () -> new InvalidTenorException("Tenor harus angka 1 sampai 6 (tahun)"));
+        final String text = raw == null ? "" : raw.trim();
+        if (!text.matches("\\d+")) {
+            throw new InvalidTenorException("Tenor harus angka 1 sampai 6 (tahun)");
+        }
+        // Over 9 digits is certainly out of range, and would overflow parseInt.
+        final int tenor = text.length() > 9 ? Integer.MAX_VALUE : Integer.parseInt(text);
         if (tenor < MIN_TENURE_YEARS || tenor > MAX_TENURE_YEARS) {
             throw new InvalidTenorException("Tenor harus 1 sampai 6 tahun");
         }
-        return (int) tenor;
+        return tenor;
     }
 
     /**
@@ -162,20 +161,5 @@ public final class LoanValidator implements LoanValidation {
                     + "% dari pinjaman (kondisi " + condition.displayName() + ")");
         }
         return downPayment;
-    }
-
-    private static String requireDigits(final String raw, final Supplier<InvalidLoanInputException> failure) {
-        if (raw == null || !raw.trim().matches("\\d+")) {
-            throw failure.get();
-        }
-        return raw.trim();
-    }
-
-    private static long parseLong(final String digits, final Supplier<InvalidLoanInputException> failure) {
-        try {
-            return Long.parseLong(digits);
-        } catch (final NumberFormatException e) {
-            throw failure.get();
-        }
     }
 }

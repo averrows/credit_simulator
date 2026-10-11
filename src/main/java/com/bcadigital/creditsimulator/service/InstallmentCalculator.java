@@ -2,9 +2,9 @@ package com.bcadigital.creditsimulator.service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Stream;
 
 import com.bcadigital.creditsimulator.model.LoanRequest;
 import com.bcadigital.creditsimulator.model.RatePolicy;
@@ -35,43 +35,18 @@ public final class InstallmentCalculator implements SimulationCalculator {
     public SimulationResult calculate(final LoanRequest request) {
         Objects.requireNonNull(request, "request");
         final RatePolicy policy = request.vehicleType().ratePolicy();
-        final BigDecimal principal = request.principal().toBigDecimal();
-        final int totalMonths = request.loanTenureYears() * MONTHS_PER_YEAR;
-        // Two-arg iterate + limit: next() runs only on years inside the tenor,
-        // so monthsLeft never reaches zero.
-        final List<YearlyResult> yearly = Stream
-                .iterate(
-                        YearStep.of(1, principal, policy.annualRate(1), totalMonths),
-                        prev -> YearStep.of(
-                                prev.year() + 1,
-                                prev.remaining(),
-                                policy.annualRate(prev.year() + 1),
-                                prev.monthsLeft() - MONTHS_PER_YEAR))
-                .limit(request.loanTenureYears())
-                .map(step -> new YearlyResult(step.year(), step.rate(), step.monthly()))
-                .toList();
-        return new SimulationResult(request, yearly);
-    }
-
-    /**
-     * One computed loan year. Pure math over {@code (basis, rate, monthsLeft)} —
-     * it knows nothing about rate schedules or tenors; the caller derives the rate
-     * per year and counts the months down by 12.
-     *
-     * @param year the 1-based loan year (carried for the output)
-     * @param rate the rate applied that year
-     * @param monthly the monthly installment
-     * @param remaining the principal left for the next year
-     * @param monthsLeft the remaining months this slice was spread over
-     */
-    private record YearStep(int year, BigDecimal rate, BigDecimal monthly, BigDecimal remaining, int monthsLeft) {
-
-        static YearStep of(final int year, final BigDecimal basis, final BigDecimal rate, final int monthsLeft) {
-            final BigDecimal yearTotal = basis.multiply(BigDecimal.ONE.add(rate));
+        final int tenor = request.loanTenureYears();
+        final List<YearlyResult> yearly = new ArrayList<>(tenor);
+        BigDecimal remaining = request.principal().toBigDecimal();
+        for (int year = 1; year <= tenor; year++) {
+            final BigDecimal rate = policy.annualRate(year);
+            final int monthsLeft = (tenor - year + 1) * MONTHS_PER_YEAR;
+            final BigDecimal yearTotal = remaining.multiply(BigDecimal.ONE.add(rate));
             final BigDecimal monthly = yearTotal.divide(
                     BigDecimal.valueOf(monthsLeft), MONEY_SCALE, RoundingMode.HALF_UP);
-            return new YearStep(year, rate, monthly,
-                    yearTotal.subtract(monthly.multiply(BigDecimal.valueOf(MONTHS_PER_YEAR))), monthsLeft);
+            remaining = yearTotal.subtract(monthly.multiply(BigDecimal.valueOf(MONTHS_PER_YEAR)));
+            yearly.add(new YearlyResult(year, rate, monthly));
         }
+        return new SimulationResult(request, yearly);
     }
 }

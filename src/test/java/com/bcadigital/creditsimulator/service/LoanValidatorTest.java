@@ -199,4 +199,16 @@ class LoanValidatorTest {
                 VehicleType.MOBIL, VehicleCondition.BARU, "2025", "abc jt", "3", "35 jt"))
                 .isInstanceOf(InvalidTotalLoanException.class);
     }
+
+    @Test
+    void shouldAccept_whenTenorHasLeadingZero() {
+        assertThat(validator.parseTenor("06")).isEqualTo(6);
+    }
+
+    @Test
+    void shouldRejectAsOutOfRange_whenTenorHasManyDigits() {
+        assertThatThrownBy(() -> validator.parseTenor("99999999999999999999"))
+                .isInstanceOf(InvalidTenorException.class)
+                .hasMessage("Tenor harus 1 sampai 6 tahun");
+    }
 }
