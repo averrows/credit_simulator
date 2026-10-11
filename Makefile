@@ -13,7 +13,7 @@ build: ## Build jar cepat (tanpa test).
 verify: ## Build penuh: test + gate coverage 85%.
 	mvn verify
 
-test: ## Jalankan 71 unit test saja.
+test: ## Jalankan 99 unit test saja.
 	mvn test
 
 run: build ## Jalankan interaktif.

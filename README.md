@@ -13,7 +13,7 @@ Mockito, AssertJ.
 ## Build
 
 ```bash
-mvn verify              # compile + 71 test + gate coverage 85%
+mvn verify              # compile + 99 test + gate coverage 85%
 mvn -q -DskipTests package   # cepat, tanpa test
 ```
 
@@ -103,25 +103,38 @@ URL permanen lain (Beeceptor/dll.): ganti satu baris `DEFAULT_URL` di
 ## Testing & coverage
 
 ```bash
-mvn test     # 71 unit test
+mvn test     # 99 unit test
 mvn verify   # + gate JaCoCo minimal 85% line coverage (sekarang ~90%)
 open target/site/jacoco/index.html   # laporan coverage
 ```
 
-## Struktur (MVC + Factory)
+## Struktur (MVC, OOP)
 
 ```
 src/main/java/com/bcadigital/creditsimulator/
-  App.java                    # argumen (file/--url), wiring sekali jalan
-  model/      MenuCommand, VehicleType, VehicleCondition, Match,
-              LoanRequest, YearlyResult, SimulationResult  (data, no logic)
-  view/       ConsoleView, InputSource (+Stream/File)      (I/O saja)
-  controller/ SimulatorController                          (deep module: loop,
-              retry per-field, dispatch)
-  service/    LoanValidator (+4 domain exception), InstallmentCalculator,
-              RatePolicy + SteppedRatePolicy + VehicleRateFactory,
-              RemoteLoader + MiniJson + RemoteLoad
+  App.java                    # composition root: satu-satunya tempat new kelas konkret
+  model/      LoanRequest, Rupiah (value object), YearlyResult, SimulationResult
+              VehicleType  -> punya RatePolicy (Strategy: SteppedRatePolicy)
+              VehicleCondition -> punya aturan tahun minimum & DP minimum
+              Choice + ChoiceMatcher (parsing prefix untuk semua enum),
+              MenuCommand, InvalidInputException (+InvalidChoiceException)
+  view/       SimulatorView <- ConsoleView, InputSource <- Stream/File  (I/O saja)
+  controller/ SimulatorController + CommandHandler (Command pattern)
+  service/    LoanValidation <- LoanValidator (+4 exception per field),
+              SimulationCalculator <- InstallmentCalculator,
+              LoadService <- RemoteLoader + MiniJson + RemoteLoad
 ```
+
+Prinsip yang dipakai:
+
+- **Polimorfisme, bukan `if` per tipe**: aturan per kondisi ada di konstanta
+  `VehicleCondition`, bunga per kendaraan di `RatePolicy` milik `VehicleType`.
+- **Bergantung ke interface**: controller cuma kenal `SimulatorView`,
+  `LoanValidation`, `SimulationCalculator`, `LoadService`; `App` yang merakit.
+- **Value object**: uang selalu `Rupiah` (immutable, tidak bisa negatif), parsing
+  `jt`/`rb`/`m` tersimpan di satu tempat.
+- **Error sebagai tipe**: semua input salah turunan `InvalidInputException`;
+  pesannya siap tampil, jenis field terbaca dari subclass.
 
 ## Docker & CI
 
