@@ -46,14 +46,14 @@ class VehicleConditionTest {
 
     @Test
     void shouldApplyOwnPercentage_whenCheckingDownPayment() {
-        assertThat(VehicleCondition.BARU.meetsMinimumDownPayment(35, 100)).isTrue();
-        assertThat(VehicleCondition.BARU.meetsMinimumDownPayment(34, 100)).isFalse();
-        assertThat(VehicleCondition.BEKAS.meetsMinimumDownPayment(25, 100)).isTrue();
-        assertThat(VehicleCondition.BEKAS.meetsMinimumDownPayment(24, 100)).isFalse();
+        assertThat(VehicleCondition.BARU.meetsMinimumDownPayment(Rupiah.of(35), Rupiah.of(100))).isTrue();
+        assertThat(VehicleCondition.BARU.meetsMinimumDownPayment(Rupiah.of(34), Rupiah.of(100))).isFalse();
+        assertThat(VehicleCondition.BEKAS.meetsMinimumDownPayment(Rupiah.of(25), Rupiah.of(100))).isTrue();
+        assertThat(VehicleCondition.BEKAS.meetsMinimumDownPayment(Rupiah.of(24), Rupiah.of(100))).isFalse();
     }
 
     @Test
     void shouldNotOverflow_whenTotalIsMaximumLoan() {
-        assertThat(VehicleCondition.BARU.meetsMinimumDownPayment(350_000_000L, 1_000_000_000L)).isTrue();
+        assertThat(VehicleCondition.BARU.meetsMinimumDownPayment(Rupiah.of(350_000_000L), Rupiah.of(1_000_000_000L))).isTrue();
     }
 }

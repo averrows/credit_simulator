@@ -9,8 +9,8 @@ class LoanRequestTest {
     @Test
     void shouldFinanceTotalMinusDownPayment_whenPrincipal() {
         final LoanRequest request = new LoanRequest(
-                VehicleType.MOBIL, VehicleCondition.BARU, 2025, 100_000_000L, 3, 35_000_000L);
+                VehicleType.MOBIL, VehicleCondition.BARU, 2025, Rupiah.of(100_000_000L), 3, Rupiah.of(35_000_000L));
 
-        assertThat(request.principal()).isEqualTo(65_000_000L);
+        assertThat(request.principal()).isEqualTo(Rupiah.of(65_000_000L));
     }
 }

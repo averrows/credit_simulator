@@ -11,6 +11,7 @@ import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;
 
 import com.bcadigital.creditsimulator.model.LoanRequest;
+import com.bcadigital.creditsimulator.model.Rupiah;
 import com.bcadigital.creditsimulator.model.VehicleCondition;
 import com.bcadigital.creditsimulator.model.VehicleType;
 
@@ -32,9 +33,9 @@ class LoanValidatorTest {
         assertThat(request.vehicleType()).isEqualTo(VehicleType.MOBIL);
         assertThat(request.vehicleCondition()).isEqualTo(VehicleCondition.BARU);
         assertThat(request.vehicleYear()).isEqualTo(2025);
-        assertThat(request.totalLoanAmount()).isEqualTo(100_000_000L);
+        assertThat(request.totalLoanAmount()).isEqualTo(Rupiah.of(100_000_000L));
         assertThat(request.loanTenureYears()).isEqualTo(3);
-        assertThat(request.downPayment()).isEqualTo(35_000_000L);
+        assertThat(request.downPayment()).isEqualTo(Rupiah.of(35_000_000L));
     }
 
     @Test
@@ -121,11 +122,11 @@ class LoanValidatorTest {
 
     @Test
     void shouldAccept_whenDownPaymentExactlyAtMinimum() {
-        assertThat(validBaru().downPayment()).isEqualTo(35_000_000L);
+        assertThat(validBaru().downPayment()).isEqualTo(Rupiah.of(35_000_000L));
         final LoanRequest bekas = validator.validate(
                 VehicleType.MOTOR, VehicleCondition.BEKAS, "2015", "100000000", "2", "25000000");
 
-        assertThat(bekas.downPayment()).isEqualTo(25_000_000L);
+        assertThat(bekas.downPayment()).isEqualTo(Rupiah.of(25_000_000L));
     }
 
     @Test
@@ -159,16 +160,16 @@ class LoanValidatorTest {
     void shouldAccept_whenMagnitudeSuffixes() {
         assertThat(validator.validate(
                 VehicleType.MOBIL, VehicleCondition.BARU, "2025", "100 jt", "3", "35 jt")
-                .totalLoanAmount()).isEqualTo(100_000_000L);
+                .totalLoanAmount()).isEqualTo(Rupiah.of(100_000_000L));
         assertThat(validator.validate(
                 VehicleType.MOBIL, VehicleCondition.BARU, "2025", "0,1 m", "3", "35000 rb")
-                .downPayment()).isEqualTo(35_000_000L);
+                .downPayment()).isEqualTo(Rupiah.of(35_000_000L));
         assertThat(validator.validate(
                 VehicleType.MOBIL, VehicleCondition.BARU, "2025", "100000 rb", "3", "35 JUTA")
-                .totalLoanAmount()).isEqualTo(100_000_000L);
+                .totalLoanAmount()).isEqualTo(Rupiah.of(100_000_000L));
         assertThat(validator.validate(
                 VehicleType.MOBIL, VehicleCondition.BARU, "2025", "203.35 jt", "3", "100 jt")
-                .totalLoanAmount()).isEqualTo(203_350_000L);
+                .totalLoanAmount()).isEqualTo(Rupiah.of(203_350_000L));
     }
 
     @Test
@@ -176,8 +177,8 @@ class LoanValidatorTest {
         final LoanRequest request = validator.validate(
                 VehicleType.MOBIL, VehicleCondition.BARU, "2025", "1 m", "6", "350 jt");
 
-        assertThat(request.totalLoanAmount()).isEqualTo(1_000_000_000L);
-        assertThat(request.downPayment()).isEqualTo(350_000_000L);
+        assertThat(request.totalLoanAmount()).isEqualTo(Rupiah.of(1_000_000_000L));
+        assertThat(request.downPayment()).isEqualTo(Rupiah.of(350_000_000L));
     }
 
     @Test

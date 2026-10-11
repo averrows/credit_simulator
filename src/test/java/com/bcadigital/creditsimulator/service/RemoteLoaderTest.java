@@ -15,6 +15,7 @@ import java.time.ZoneOffset;
 
 import org.junit.jupiter.api.Test;
 
+import com.bcadigital.creditsimulator.model.Rupiah;
 import com.bcadigital.creditsimulator.model.VehicleCondition;
 import com.bcadigital.creditsimulator.model.VehicleType;
 
@@ -55,9 +56,9 @@ class RemoteLoaderTest {
         assertThat(loaded.request().vehicleType()).isEqualTo(VehicleType.MOTOR);
         assertThat(loaded.request().vehicleCondition()).isEqualTo(VehicleCondition.BEKAS);
         assertThat(loaded.request().vehicleYear()).isEqualTo(2015);
-        assertThat(loaded.request().totalLoanAmount()).isEqualTo(100_000_000L);
+        assertThat(loaded.request().totalLoanAmount()).isEqualTo(Rupiah.of(100_000_000L));
         assertThat(loaded.request().loanTenureYears()).isEqualTo(2);
-        assertThat(loaded.request().downPayment()).isEqualTo(25_000_000L);
+        assertThat(loaded.request().downPayment()).isEqualTo(Rupiah.of(25_000_000L));
     }
 
     @Test
@@ -67,7 +68,7 @@ class RemoteLoaderTest {
         assertThat(loaded.fallbackUsed()).isTrue();
         assertThat(loaded.request().vehicleType()).isEqualTo(VehicleType.MOBIL);
         assertThat(loaded.request().loanTenureYears()).isEqualTo(6);
-        assertThat(loaded.request().downPayment()).isEqualTo(500_000_000L);
+        assertThat(loaded.request().downPayment()).isEqualTo(Rupiah.of(500_000_000L));
     }
 
     @Test

@@ -35,7 +35,7 @@ public final class InstallmentCalculator implements SimulationCalculator {
     public SimulationResult calculate(final LoanRequest request) {
         Objects.requireNonNull(request, "request");
         final RatePolicy policy = request.vehicleType().ratePolicy();
-        final BigDecimal principal = BigDecimal.valueOf(request.principal());
+        final BigDecimal principal = request.principal().toBigDecimal();
         final int totalMonths = request.loanTenureYears() * MONTHS_PER_YEAR;
         // Two-arg iterate + limit: next() runs only on years inside the tenor,
         // so monthsLeft never reaches zero.

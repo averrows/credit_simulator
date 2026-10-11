@@ -58,12 +58,12 @@ public enum VehicleCondition implements Choice {
     /**
      * Tells whether a down payment meets this condition's minimum percentage.
      *
-     * @param downPayment the down payment in rupiah
-     * @param totalLoanAmount the total loan amount in rupiah
+     * @param downPayment the down payment; never null
+     * @param totalLoanAmount the total loan amount; never null
      * @return true when {@code downPayment} is at least the minimum share of the total
      */
-    public boolean meetsMinimumDownPayment(final long downPayment, final long totalLoanAmount) {
-        return downPayment * 100 >= (long) minDownPaymentPercent * totalLoanAmount;
+    public boolean meetsMinimumDownPayment(final Rupiah downPayment, final Rupiah totalLoanAmount) {
+        return downPayment.isAtLeastPercentOf(minDownPaymentPercent, totalLoanAmount);
     }
 
     /**

@@ -12,6 +12,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 import com.bcadigital.creditsimulator.model.LoanRequest;
+import com.bcadigital.creditsimulator.model.Rupiah;
 import com.bcadigital.creditsimulator.model.SimulationResult;
 import com.bcadigital.creditsimulator.model.VehicleCondition;
 import com.bcadigital.creditsimulator.model.VehicleType;
@@ -30,7 +31,7 @@ class ConsoleViewTest {
         final ByteArrayOutputStream captured = new ByteArrayOutputStream();
         final ConsoleView view = viewWith(captured);
         final SimulationResult result = new SimulationResult(
-                new LoanRequest(VehicleType.MOBIL, VehicleCondition.BEKAS, 2015, 100_000_000L, 2, 25_000_000L),
+                new LoanRequest(VehicleType.MOBIL, VehicleCondition.BEKAS, 2015, Rupiah.of(100_000_000L), 2, Rupiah.of(25_000_000L)),
                 List.of(
                         new YearlyResult(1, new BigDecimal("0.08"), new BigDecimal("2250000.00")),
                         new YearlyResult(2, new BigDecimal("0.081"), new BigDecimal("2432250.00"))));

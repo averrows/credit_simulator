@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.Test;
 
 import com.bcadigital.creditsimulator.model.LoanRequest;
+import com.bcadigital.creditsimulator.model.Rupiah;
 import com.bcadigital.creditsimulator.model.SimulationResult;
 import com.bcadigital.creditsimulator.model.VehicleCondition;
 import com.bcadigital.creditsimulator.model.VehicleType;
@@ -15,7 +16,7 @@ class InstallmentCalculatorTest {
     private final InstallmentCalculator calculator = new InstallmentCalculator();
 
     private LoanRequest rumusCase() {
-        return new LoanRequest(VehicleType.MOBIL, VehicleCondition.BEKAS, 2015, 100_000_000L, 3, 25_000_000L);
+        return new LoanRequest(VehicleType.MOBIL, VehicleCondition.BEKAS, 2015, Rupiah.of(100_000_000L), 3, Rupiah.of(25_000_000L));
     }
 
     @Test
@@ -35,7 +36,7 @@ class InstallmentCalculatorTest {
     @Test
     void shouldSpreadOverTwelveMonths_whenTenorOneYear() {
         final LoanRequest request =
-                new LoanRequest(VehicleType.MOTOR, VehicleCondition.BARU, 2025, 120_000_000L, 1, 42_000_000L);
+                new LoanRequest(VehicleType.MOTOR, VehicleCondition.BARU, 2025, Rupiah.of(120_000_000L), 1, Rupiah.of(42_000_000L));
 
         final SimulationResult result = calculator.calculate(request);
 

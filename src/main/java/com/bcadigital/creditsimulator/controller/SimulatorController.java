@@ -10,6 +10,7 @@ import com.bcadigital.creditsimulator.model.InvalidInputException;
 import com.bcadigital.creditsimulator.model.LoanRequest;
 import com.bcadigital.creditsimulator.model.Match;
 import com.bcadigital.creditsimulator.model.MenuCommand;
+import com.bcadigital.creditsimulator.model.Rupiah;
 import com.bcadigital.creditsimulator.model.VehicleCondition;
 import com.bcadigital.creditsimulator.model.VehicleType;
 import com.bcadigital.creditsimulator.service.LoadService;
@@ -119,9 +120,9 @@ public final class SimulatorController {
             final VehicleCondition condition = ask("Kondisi [Baru|Bekas]: ",
                     raw -> announced(raw, VehicleCondition.parse(raw)));
             final int year = ask("Tahun Kendaraan [YYYY]: ", raw -> validator.parseYear(raw, condition));
-            final long total = ask("Jumlah Pinjaman Total: ", validator::parseTotal);
+            final Rupiah total = ask("Jumlah Pinjaman Total: ", validator::parseTotal);
             final int tenor = ask("Tenor Pinjaman (1-6 thn): ", validator::parseTenor);
-            final long downPayment = ask("Jumlah DP: ",
+            final Rupiah downPayment = ask("Jumlah DP: ",
                     raw -> validator.parseDownPayment(raw, condition, total));
             view.showResult(calculator.calculate(
                     new LoanRequest(type, condition, year, total, tenor, downPayment)));

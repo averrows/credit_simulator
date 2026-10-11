@@ -18,6 +18,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 import com.bcadigital.creditsimulator.model.LoanRequest;
+import com.bcadigital.creditsimulator.model.Rupiah;
 import com.bcadigital.creditsimulator.model.MenuCommand;
 import com.bcadigital.creditsimulator.model.SimulationResult;
 import com.bcadigital.creditsimulator.model.VehicleCondition;
@@ -264,7 +265,7 @@ class SimulatorControllerTest {
     @Test
     void shouldUseInjectedDoubles_whenDispatchLoad() {
         final LoanRequest request = new LoanRequest(
-                VehicleType.MOTOR, VehicleCondition.BEKAS, 2015, 100_000_000L, 2, 25_000_000L);
+                VehicleType.MOTOR, VehicleCondition.BEKAS, 2015, Rupiah.of(100_000_000L), 2, Rupiah.of(25_000_000L));
         final SimulationResult result = new SimulationResult(request, List.of(
                 new YearlyResult(1, new BigDecimal("0.09"), new BigDecimal("3406250.00"))));
         final List<SimulationResult> shown = new ArrayList<>();

@@ -1,6 +1,7 @@
 package com.bcadigital.creditsimulator.service;
 
 import com.bcadigital.creditsimulator.model.LoanRequest;
+import com.bcadigital.creditsimulator.model.Rupiah;
 import com.bcadigital.creditsimulator.model.VehicleCondition;
 import com.bcadigital.creditsimulator.model.VehicleType;
 
@@ -47,10 +48,10 @@ public interface LoanValidation {
      * Parses and validates one total-loan input.
      *
      * @param raw the raw total text
-     * @return the valid total in rupiah
+     * @return the valid total, never null
      * @throws InvalidTotalLoanException when the total is invalid
      */
-    long parseTotal(String raw);
+    Rupiah parseTotal(String raw);
 
     /**
      * Parses and validates one tenure input.
@@ -66,9 +67,9 @@ public interface LoanValidation {
      *
      * @param raw the raw DP text
      * @param condition the vehicle condition; never null
-     * @param total the already-validated total loan amount
-     * @return the valid DP in rupiah
+     * @param total the already-validated total loan amount; never null
+     * @return the valid DP, never null
      * @throws InvalidDownPaymentException when the DP is invalid
      */
-    long parseDownPayment(String raw, VehicleCondition condition, long total);
+    Rupiah parseDownPayment(String raw, VehicleCondition condition, Rupiah total);
 }
