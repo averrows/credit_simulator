@@ -33,8 +33,8 @@ class ConsoleViewTest {
         final SimulationResult result = new SimulationResult(
                 new LoanRequest(VehicleType.MOBIL, VehicleCondition.BEKAS, 2015, Rupiah.of(100_000_000L), 2, Rupiah.of(25_000_000L)),
                 List.of(
-                        new YearlyResult(1, new BigDecimal("0.08"), new BigDecimal("75000000"), new BigDecimal("2250000.00")),
-                        new YearlyResult(2, new BigDecimal("0.081"), new BigDecimal("54000000"), new BigDecimal("2432250.00"))));
+                        new YearlyResult(1, new BigDecimal("0.08"), new BigDecimal("2250000.00")),
+                        new YearlyResult(2, new BigDecimal("0.081"), new BigDecimal("2432250.00"))));
 
         view.showResult(result);
 

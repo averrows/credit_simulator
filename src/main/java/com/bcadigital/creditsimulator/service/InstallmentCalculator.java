@@ -49,16 +49,15 @@ public final class InstallmentCalculator implements SimulationCalculator {
         final RatePolicy policy = rates.forType(request.vehicleType());
         final int tenor = request.loanTenureYears();
         final List<YearlyResult> yearly = new ArrayList<>(tenor);
-        BigDecimal principal = request.principal().toBigDecimal();
+        BigDecimal remaining = request.principal().toBigDecimal();
         for (int year = 1; year <= tenor; year++) {
             final BigDecimal rate = policy.annualRate(year);
             final int monthsLeft = (tenor - year + 1) * MONTHS_PER_YEAR;
-            final BigDecimal yearTotal = principal.multiply(BigDecimal.ONE.add(rate));
+            final BigDecimal yearTotal = remaining.multiply(BigDecimal.ONE.add(rate));
             final BigDecimal monthly = yearTotal.divide(
                     BigDecimal.valueOf(monthsLeft), MONEY_SCALE, RoundingMode.HALF_UP);
-            final YearlyResult result = new YearlyResult(year, rate, principal, monthly);
-            yearly.add(result);
-            principal = result.remainingPrincipal();
+            remaining = yearTotal.subtract(monthly.multiply(BigDecimal.valueOf(MONTHS_PER_YEAR)));
+            yearly.add(new YearlyResult(year, rate, monthly));
         }
         return new SimulationResult(request, yearly);
     }
