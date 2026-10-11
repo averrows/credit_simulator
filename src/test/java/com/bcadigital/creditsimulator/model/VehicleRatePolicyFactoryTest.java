@@ -7,11 +7,13 @@ import java.math.BigDecimal;
 
 import org.junit.jupiter.api.Test;
 
-class SteppedRatePolicyTest {
+class VehicleRatePolicyFactoryTest {
+
+    private final RatePolicyFactory factory = new VehicleRatePolicyFactory();
 
     @Test
     void shouldStepAlternately_whenMobil() {
-        final RatePolicy policy = VehicleType.MOBIL.ratePolicy();
+        final RatePolicy policy = factory.forType(VehicleType.MOBIL);
 
         assertThat(policy.annualRate(1)).isEqualByComparingTo("0.08");
         assertThat(policy.annualRate(2)).isEqualByComparingTo("0.081");
@@ -23,7 +25,7 @@ class SteppedRatePolicyTest {
 
     @Test
     void shouldStartFromNinePercent_whenMotor() {
-        final RatePolicy policy = VehicleType.MOTOR.ratePolicy();
+        final RatePolicy policy = factory.forType(VehicleType.MOTOR);
 
         assertThat(policy.annualRate(1)).isEqualByComparingTo("0.09");
         assertThat(policy.annualRate(2)).isEqualByComparingTo("0.091");
@@ -32,14 +34,14 @@ class SteppedRatePolicyTest {
 
     @Test
     void shouldReject_whenYearBelowOne() {
-        final RatePolicy policy = VehicleType.MOBIL.ratePolicy();
+        final RatePolicy policy = factory.forType(VehicleType.MOBIL);
 
         assertThrows(IllegalArgumentException.class, () -> policy.annualRate(0));
     }
 
     @Test
     void shouldUseExactDecimalArithmetic_whenStepping() {
-        final RatePolicy policy = VehicleType.MOBIL.ratePolicy();
+        final RatePolicy policy = factory.forType(VehicleType.MOBIL);
 
         assertThat(policy.annualRate(3)).isEqualTo(new BigDecimal("0.086"));
     }

@@ -108,13 +108,14 @@ mvn verify   # + gate JaCoCo minimal 85% line coverage (sekarang ~90%)
 open target/site/jacoco/index.html   # laporan coverage
 ```
 
-## Struktur (MVC, OOP)
+## Struktur (MVC + Factory)
 
 ```
 src/main/java/com/bcadigital/creditsimulator/
   App.java                    # composition root: satu-satunya tempat new kelas konkret
   model/      LoanRequest, Rupiah (value object), YearlyResult, SimulationResult
-              VehicleType  -> punya RatePolicy (Strategy: SteppedRatePolicy)
+              RatePolicyFactory <- VehicleRatePolicyFactory (Factory) membuat
+              RatePolicy per VehicleType (Strategy: SteppedRatePolicy)
               VehicleCondition -> punya aturan tahun minimum & DP minimum
               Choice + ChoiceMatcher (parsing prefix untuk semua enum),
               MenuCommand, InvalidInputException (+InvalidChoiceException)

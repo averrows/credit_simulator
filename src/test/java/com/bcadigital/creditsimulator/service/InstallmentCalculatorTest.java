@@ -3,17 +3,20 @@ package com.bcadigital.creditsimulator.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.math.BigDecimal;
+
 import org.junit.jupiter.api.Test;
 
 import com.bcadigital.creditsimulator.model.LoanRequest;
 import com.bcadigital.creditsimulator.model.Rupiah;
 import com.bcadigital.creditsimulator.model.SimulationResult;
 import com.bcadigital.creditsimulator.model.VehicleCondition;
+import com.bcadigital.creditsimulator.model.VehicleRatePolicyFactory;
 import com.bcadigital.creditsimulator.model.VehicleType;
 
 class InstallmentCalculatorTest {
 
-    private final InstallmentCalculator calculator = new InstallmentCalculator();
+    private final InstallmentCalculator calculator = new InstallmentCalculator(new VehicleRatePolicyFactory());
 
     private LoanRequest rumusCase() {
         return new LoanRequest(VehicleType.MOBIL, VehicleCondition.BEKAS, 2015, Rupiah.of(100_000_000L), 3, Rupiah.of(25_000_000L));
@@ -47,5 +50,15 @@ class InstallmentCalculatorTest {
     @Test
     void shouldReject_whenRequestNull() {
         assertThrows(NullPointerException.class, () -> calculator.calculate(null));
+    }
+
+    @Test
+    void shouldUseFactoryRates_whenFactoryInjected() {
+        final InstallmentCalculator flat = new InstallmentCalculator(type -> year -> BigDecimal.ZERO);
+
+        final SimulationResult result = flat.calculate(rumusCase());
+
+        assertThat(result.yearlyResults().get(0).monthlyInstallment()).isEqualByComparingTo("2083333.33");
+        assertThat(result.yearlyResults().get(2).annualRate()).isEqualByComparingTo("0");
     }
 }

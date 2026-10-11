@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.time.Clock;
 
 import com.bcadigital.creditsimulator.controller.SimulatorController;
+import com.bcadigital.creditsimulator.model.VehicleRatePolicyFactory;
 import com.bcadigital.creditsimulator.service.InstallmentCalculator;
 import com.bcadigital.creditsimulator.service.LoanValidation;
 import com.bcadigital.creditsimulator.service.LoanValidator;
@@ -45,7 +46,7 @@ public final class App {
             view = new ConsoleView(new StreamInputSource(System.in), System.out);
         }
         final LoanValidation validator = new LoanValidator(Clock.systemDefaultZone());
-        new SimulatorController(view, batchMode, validator, new InstallmentCalculator(),
+        new SimulatorController(view, batchMode, validator, new InstallmentCalculator(new VehicleRatePolicyFactory()),
                 RemoteLoader.withDefaultClient(options.apiUrl(), validator)).run();
     }
 }

@@ -8,6 +8,7 @@ import java.util.Objects;
 
 import com.bcadigital.creditsimulator.model.LoanRequest;
 import com.bcadigital.creditsimulator.model.RatePolicy;
+import com.bcadigital.creditsimulator.model.RatePolicyFactory;
 import com.bcadigital.creditsimulator.model.SimulationResult;
 import com.bcadigital.creditsimulator.model.YearlyResult;
 
@@ -25,6 +26,17 @@ public final class InstallmentCalculator implements SimulationCalculator {
     private static final int MONTHS_PER_YEAR = 12;
     private static final int MONEY_SCALE = 2;
 
+    private final RatePolicyFactory rates;
+
+    /**
+     * Creates a calculator.
+     *
+     * @param rates supplies the rate policy for each vehicle kind; never null
+     */
+    public InstallmentCalculator(final RatePolicyFactory rates) {
+        this.rates = Objects.requireNonNull(rates, "rates");
+    }
+
     /**
      * Calculates the full schedule for a validated request.
      *
@@ -34,7 +46,7 @@ public final class InstallmentCalculator implements SimulationCalculator {
     @Override
     public SimulationResult calculate(final LoanRequest request) {
         Objects.requireNonNull(request, "request");
-        final RatePolicy policy = request.vehicleType().ratePolicy();
+        final RatePolicy policy = rates.forType(request.vehicleType());
         final int tenor = request.loanTenureYears();
         final List<YearlyResult> yearly = new ArrayList<>(tenor);
         BigDecimal remaining = request.principal().toBigDecimal();

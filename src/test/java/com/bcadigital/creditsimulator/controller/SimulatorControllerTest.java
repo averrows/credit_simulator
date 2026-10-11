@@ -22,6 +22,7 @@ import com.bcadigital.creditsimulator.model.Rupiah;
 import com.bcadigital.creditsimulator.model.MenuCommand;
 import com.bcadigital.creditsimulator.model.SimulationResult;
 import com.bcadigital.creditsimulator.model.VehicleCondition;
+import com.bcadigital.creditsimulator.model.VehicleRatePolicyFactory;
 import com.bcadigital.creditsimulator.model.VehicleType;
 import com.bcadigital.creditsimulator.model.YearlyResult;
 import com.bcadigital.creditsimulator.service.InstallmentCalculator;
@@ -67,7 +68,7 @@ class SimulatorControllerTest {
                     new PrintStream(captured, true, StandardCharsets.UTF_8));
             final LoanValidation validator = new LoanValidator(PINNED);
             this.controller = new SimulatorController(view, batchMode, validator,
-                    new InstallmentCalculator(), RemoteLoader.withDefaultClient(UNREACHABLE_URL, validator));
+                    new InstallmentCalculator(new VehicleRatePolicyFactory()), RemoteLoader.withDefaultClient(UNREACHABLE_URL, validator));
         }
 
         String output() {

@@ -8,8 +8,8 @@ import java.util.Objects;
  *
  * <p>Year 1 uses the base rate. Each following year adds 0,1% on even years and
  * 0,5% on odd years (8% → 8,1% → 8,6% → 8,7% …), which is the only reading of
- * Rules 7-8 consistent with the Rumus sample. Each {@link VehicleType} creates
- * its own instance with its base rate (Rule 9).
+ * Rules 7-8 consistent with the Rumus sample. Created by
+ * {@link VehicleRatePolicyFactory} with each vehicle's base rate (Rule 9).
  */
 final class SteppedRatePolicy implements RatePolicy {
 
