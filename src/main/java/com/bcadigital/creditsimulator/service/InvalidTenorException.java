@@ -11,6 +11,6 @@ public final class InvalidTenorException extends InvalidLoanInputException {
      * @param message the user-facing reason; never null
      */
     public InvalidTenorException(final String message) {
-        super(Field.TENURE, message);
+        super(message);
     }
 }

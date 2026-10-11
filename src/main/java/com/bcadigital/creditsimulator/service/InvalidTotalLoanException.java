@@ -11,6 +11,6 @@ public final class InvalidTotalLoanException extends InvalidLoanInputException {
      * @param message the user-facing reason; never null
      */
     public InvalidTotalLoanException(final String message) {
-        super(Field.TOTAL_LOAN, message);
+        super(message);
     }
 }

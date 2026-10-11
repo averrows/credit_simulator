@@ -1,6 +1,7 @@
 package com.bcadigital.creditsimulator.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.Clock;
@@ -12,7 +13,6 @@ import org.junit.jupiter.api.Test;
 import com.bcadigital.creditsimulator.model.LoanRequest;
 import com.bcadigital.creditsimulator.model.VehicleCondition;
 import com.bcadigital.creditsimulator.model.VehicleType;
-import com.bcadigital.creditsimulator.service.InvalidLoanInputException.Field;
 
 class LoanValidatorTest {
 
@@ -50,7 +50,7 @@ class LoanValidatorTest {
         final InvalidYearException failure = assertThrows(InvalidYearException.class, () -> validator.validate(
                 VehicleType.MOBIL, VehicleCondition.BARU, "2024", "100000000", "3", "35000000"));
 
-        assertThat(failure.getField()).isEqualTo(Field.VEHICLE_YEAR);
+        assertThat(failure).hasMessage("Kendaraan baru: tahun minimal 2025");
     }
 
     @Test
@@ -63,51 +63,51 @@ class LoanValidatorTest {
 
     @Test
     void shouldReject_whenYearIsNotFourDigits() {
-        assertThat(fieldOf(() -> validator.validate(
-                VehicleType.MOBIL, VehicleCondition.BARU, "25", "100000000", "3", "35000000")))
-                .isEqualTo(Field.VEHICLE_YEAR);
-        assertThat(fieldOf(() -> validator.validate(
-                VehicleType.MOBIL, VehicleCondition.BARU, "20245", "100000000", "3", "35000000")))
-                .isEqualTo(Field.VEHICLE_YEAR);
-        assertThat(fieldOf(() -> validator.validate(
-                VehicleType.MOBIL, VehicleCondition.BARU, "abcd", "100000000", "3", "35000000")))
-                .isEqualTo(Field.VEHICLE_YEAR);
-        assertThat(fieldOf(() -> validator.validate(
-                VehicleType.MOBIL, VehicleCondition.BEKAS, "200032", "100000000", "3", "25000000")))
-                .isEqualTo(Field.VEHICLE_YEAR);
+        assertThatThrownBy(() -> validator.validate(
+                VehicleType.MOBIL, VehicleCondition.BARU, "25", "100000000", "3", "35000000"))
+                .isInstanceOf(InvalidYearException.class);
+        assertThatThrownBy(() -> validator.validate(
+                VehicleType.MOBIL, VehicleCondition.BARU, "20245", "100000000", "3", "35000000"))
+                .isInstanceOf(InvalidYearException.class);
+        assertThatThrownBy(() -> validator.validate(
+                VehicleType.MOBIL, VehicleCondition.BARU, "abcd", "100000000", "3", "35000000"))
+                .isInstanceOf(InvalidYearException.class);
+        assertThatThrownBy(() -> validator.validate(
+                VehicleType.MOBIL, VehicleCondition.BEKAS, "200032", "100000000", "3", "25000000"))
+                .isInstanceOf(InvalidYearException.class);
     }
 
     @Test
     void shouldReject_whenTotalLoanOutOfRange() {
-        assertThat(fieldOf(() -> validator.validate(
-                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "0", "3", "0")))
-                .isEqualTo(Field.TOTAL_LOAN);
-        assertThat(fieldOf(() -> validator.validate(
-                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "1000000001", "3", "350000000")))
-                .isEqualTo(Field.TOTAL_LOAN);
-        assertThat(fieldOf(() -> validator.validate(
-                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "abc", "3", "35000000")))
-                .isEqualTo(Field.TOTAL_LOAN);
+        assertThatThrownBy(() -> validator.validate(
+                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "0", "3", "0"))
+                .isInstanceOf(InvalidTotalLoanException.class);
+        assertThatThrownBy(() -> validator.validate(
+                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "1000000001", "3", "350000000"))
+                .isInstanceOf(InvalidTotalLoanException.class);
+        assertThatThrownBy(() -> validator.validate(
+                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "abc", "3", "35000000"))
+                .isInstanceOf(InvalidTotalLoanException.class);
     }
 
     @Test
     void shouldReject_whenHugeTotalLoanOverflowsParsing() {
-        assertThat(fieldOf(() -> validator.validate(
-                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "99999999999999999999999", "3", "1")))
-                .isEqualTo(Field.TOTAL_LOAN);
+        assertThatThrownBy(() -> validator.validate(
+                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "99999999999999999999999", "3", "1"))
+                .isInstanceOf(InvalidTotalLoanException.class);
     }
 
     @Test
     void shouldReject_whenTenorOutOfRange() {
-        assertThat(fieldOf(() -> validator.validate(
-                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "100000000", "0", "35000000")))
-                .isEqualTo(Field.TENURE);
-        assertThat(fieldOf(() -> validator.validate(
-                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "100000000", "7", "35000000")))
-                .isEqualTo(Field.TENURE);
-        assertThat(fieldOf(() -> validator.validate(
-                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "100000000", "tiga", "35000000")))
-                .isEqualTo(Field.TENURE);
+        assertThatThrownBy(() -> validator.validate(
+                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "100000000", "0", "35000000"))
+                .isInstanceOf(InvalidTenorException.class);
+        assertThatThrownBy(() -> validator.validate(
+                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "100000000", "7", "35000000"))
+                .isInstanceOf(InvalidTenorException.class);
+        assertThatThrownBy(() -> validator.validate(
+                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "100000000", "tiga", "35000000"))
+                .isInstanceOf(InvalidTenorException.class);
     }
 
     @Test
@@ -116,7 +116,7 @@ class LoanValidatorTest {
                 () -> validator.validate(
                         VehicleType.MOBIL, VehicleCondition.BARU, "2025", "100000000", "3", "34000000"));
 
-        assertThat(failure.getField()).isEqualTo(Field.DOWN_PAYMENT);
+        assertThat(failure).hasMessage("DP minimal 35% dari pinjaman (kondisi Baru)");
     }
 
     @Test
@@ -130,29 +130,29 @@ class LoanValidatorTest {
 
     @Test
     void shouldReject_whenDownPaymentOneRupiahBelowMinimum() {
-        assertThat(fieldOf(() -> validator.validate(
-                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "100000000", "3", "34999999")))
-                .isEqualTo(Field.DOWN_PAYMENT);
-        assertThat(fieldOf(() -> validator.validate(
-                VehicleType.MOTOR, VehicleCondition.BEKAS, "2015", "100000000", "2", "24999999")))
-                .isEqualTo(Field.DOWN_PAYMENT);
+        assertThatThrownBy(() -> validator.validate(
+                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "100000000", "3", "34999999"))
+                .isInstanceOf(InvalidDownPaymentException.class);
+        assertThatThrownBy(() -> validator.validate(
+                VehicleType.MOTOR, VehicleCondition.BEKAS, "2015", "100000000", "2", "24999999"))
+                .isInstanceOf(InvalidDownPaymentException.class);
     }
 
     @Test
     void shouldReject_whenUsedVehicleDownPaymentBelow25Percent() {
-        assertThat(fieldOf(() -> validator.validate(
-                VehicleType.MOTOR, VehicleCondition.BEKAS, "2015", "100000000", "2", "24000000")))
-                .isEqualTo(Field.DOWN_PAYMENT);
+        assertThatThrownBy(() -> validator.validate(
+                VehicleType.MOTOR, VehicleCondition.BEKAS, "2015", "100000000", "2", "24000000"))
+                .isInstanceOf(InvalidDownPaymentException.class);
     }
 
     @Test
     void shouldReject_whenDownPaymentNotLessThanTotal() {
-        assertThat(fieldOf(() -> validator.validate(
-                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "100000000", "3", "100000000")))
-                .isEqualTo(Field.DOWN_PAYMENT);
-        assertThat(fieldOf(() -> validator.validate(
-                VehicleType.MOBIL, VehicleCondition.BEKAS, "2015", "100000000", "2", "200000000")))
-                .isEqualTo(Field.DOWN_PAYMENT);
+        assertThatThrownBy(() -> validator.validate(
+                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "100000000", "3", "100000000"))
+                .isInstanceOf(InvalidDownPaymentException.class);
+        assertThatThrownBy(() -> validator.validate(
+                VehicleType.MOBIL, VehicleCondition.BEKAS, "2015", "100000000", "2", "200000000"))
+                .isInstanceOf(InvalidDownPaymentException.class);
     }
 
     @Test
@@ -182,33 +182,20 @@ class LoanValidatorTest {
 
     @Test
     void shouldReject_whenSuffixAmountInvalid() {
-        assertThat(fieldOf(() -> validator.validate(
-                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "1.5 m", "3", "1 m")))
-                .isEqualTo(Field.TOTAL_LOAN);
-        assertThat(fieldOf(() -> validator.validate(
-                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "100 jt", "3", "34.999999 jt")))
-                .isEqualTo(Field.DOWN_PAYMENT);
-        assertThat(fieldOf(() -> validator.validate(
-                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "100 jt", "3", "0.0000001 jt")))
-                .isEqualTo(Field.DOWN_PAYMENT);
-        assertThat(fieldOf(() -> validator.validate(
-                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "jt", "3", "35 jt")))
-                .isEqualTo(Field.TOTAL_LOAN);
-        assertThat(fieldOf(() -> validator.validate(
-                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "abc jt", "3", "35 jt")))
-                .isEqualTo(Field.TOTAL_LOAN);
-    }
-
-    private static Field fieldOf(final RunnableWithFailure action) {
-        try {
-            action.run();
-        } catch (final InvalidLoanInputException e) {
-            return e.getField();
-        }
-        throw new AssertionError("expected InvalidLoanInputException");
-    }
-
-    private interface RunnableWithFailure {
-        void run();
+        assertThatThrownBy(() -> validator.validate(
+                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "1.5 m", "3", "1 m"))
+                .isInstanceOf(InvalidTotalLoanException.class);
+        assertThatThrownBy(() -> validator.validate(
+                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "100 jt", "3", "34.999999 jt"))
+                .isInstanceOf(InvalidDownPaymentException.class);
+        assertThatThrownBy(() -> validator.validate(
+                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "100 jt", "3", "0.0000001 jt"))
+                .isInstanceOf(InvalidDownPaymentException.class);
+        assertThatThrownBy(() -> validator.validate(
+                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "jt", "3", "35 jt"))
+                .isInstanceOf(InvalidTotalLoanException.class);
+        assertThatThrownBy(() -> validator.validate(
+                VehicleType.MOBIL, VehicleCondition.BARU, "2025", "abc jt", "3", "35 jt"))
+                .isInstanceOf(InvalidTotalLoanException.class);
     }
 }

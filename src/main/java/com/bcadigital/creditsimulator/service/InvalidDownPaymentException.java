@@ -12,6 +12,6 @@ public final class InvalidDownPaymentException extends InvalidLoanInputException
      * @param message the user-facing reason; never null
      */
     public InvalidDownPaymentException(final String message) {
-        super(Field.DOWN_PAYMENT, message);
+        super(message);
     }
 }

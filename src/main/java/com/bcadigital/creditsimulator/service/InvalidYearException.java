@@ -12,6 +12,6 @@ public final class InvalidYearException extends InvalidLoanInputException {
      * @param message the user-facing reason; never null
      */
     public InvalidYearException(final String message) {
-        super(Field.VEHICLE_YEAR, message);
+        super(message);
     }
 }
