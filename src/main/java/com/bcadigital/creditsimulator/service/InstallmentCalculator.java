@@ -36,11 +36,14 @@ public final class InstallmentCalculator {
         final BigDecimal principal =
                 BigDecimal.valueOf(request.totalLoanAmount() - request.downPayment());
         final int totalMonths = request.loanTenureYears() * MONTHS_PER_YEAR;
+        // Two-arg iterate + limit: next() runs only on years inside the tenor,
+        // so monthsLeft never reaches zero (the 3-arg form eagerly computes one
+        // past the end and would divide by zero there).
         final List<YearlyResult> yearly = Stream
                 .iterate(
                         YearStep.first(principal, policy, totalMonths),
-                        step -> step.year() <= request.loanTenureYears(),
                         step -> step.next(policy, totalMonths))
+                .limit(request.loanTenureYears())
                 .map(step -> new YearlyResult(step.year(), step.rate(), step.monthly()))
                 .toList();
         return new SimulationResult(request, yearly);
