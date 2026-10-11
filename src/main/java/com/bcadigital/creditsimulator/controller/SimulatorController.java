@@ -113,35 +113,21 @@ public final class SimulatorController {
     }
 
     private boolean onHitung() {
-        final VehicleType type = promptValidated("Jenis Kendaraan [Mobil|Motor]: ",
-                raw -> announced(raw, VehicleType.parse(raw)));
-        if (type == null) {
-            return true;
+        try {
+            final VehicleType type = ask("Jenis Kendaraan [Mobil|Motor]: ",
+                    raw -> announced(raw, VehicleType.parse(raw)));
+            final VehicleCondition condition = ask("Kondisi [Baru|Bekas]: ",
+                    raw -> announced(raw, VehicleCondition.parse(raw)));
+            final int year = ask("Tahun Kendaraan [YYYY]: ", raw -> validator.parseYear(raw, condition));
+            final long total = ask("Jumlah Pinjaman Total: ", validator::parseTotal);
+            final int tenor = ask("Tenor Pinjaman (1-6 thn): ", validator::parseTenor);
+            final long downPayment = ask("Jumlah DP: ",
+                    raw -> validator.parseDownPayment(raw, condition, total));
+            view.showResult(calculator.calculate(
+                    new LoanRequest(type, condition, year, total, tenor, downPayment)));
+        } catch (final HitungAborted e) {
+            // The reason was already shown to the user; the session returns to the menu.
         }
-        final VehicleCondition condition = promptValidated("Kondisi [Baru|Bekas]: ",
-                raw -> announced(raw, VehicleCondition.parse(raw)));
-        if (condition == null) {
-            return true;
-        }
-        final Integer year = promptValidated("Tahun Kendaraan [YYYY]: ",
-                raw -> validator.parseYear(raw, condition));
-        if (year == null) {
-            return true;
-        }
-        final Long total = promptValidated("Jumlah Pinjaman Total: ", validator::parseTotal);
-        if (total == null) {
-            return true;
-        }
-        final Integer tenor = promptValidated("Tenor Pinjaman (1-6 thn): ", validator::parseTenor);
-        if (tenor == null) {
-            return true;
-        }
-        final Long downPayment = promptValidated("Jumlah DP: ",
-                raw -> validator.parseDownPayment(raw, condition, total));
-        if (downPayment == null) {
-            return true;
-        }
-        view.showResult(calculator.calculate(new LoanRequest(type, condition, year, total, tenor, downPayment)));
         return true;
     }
 
@@ -150,24 +136,25 @@ public final class SimulatorController {
      *
      * @param <T> the parsed value type
      * @param label the prompt text
-     * @param parser parses and validates one entry, throwing on invalid input
-     * @return the valid value, or null on end-of-input or batch-mode abort
+     * @param parser parses one entry, throwing {@link InvalidInputException} when invalid
+     * @return the valid value, never null
+     * @throws HitungAborted on end-of-input, or on the first invalid entry in batch mode
      */
-    private <T> T promptValidated(final String label, final Function<String, T> parser) {
+    private <T> T ask(final String label, final Function<String, T> parser) {
         while (true) {
             final String raw = view.prompt(label);
             if (raw == null) {
                 if (batchMode) {
                     view.showError("file input tidak lengkap untuk hitung");
                 }
-                return null;
+                throw new HitungAborted();
             }
             try {
                 return parser.apply(raw);
             } catch (final InvalidInputException e) {
                 view.showError(e.getMessage());
                 if (batchMode) {
-                    return null;
+                    throw new HitungAborted();
                 }
             }
         }
@@ -197,5 +184,17 @@ public final class SimulatorController {
     private boolean onShow() {
         view.showMessage(MenuCommand.describeAll());
         return true;
+    }
+
+    /**
+     * Ends one {@code hitung} session early, after the reason was shown to the user.
+     * Control flow only, so it skips the stack trace.
+     */
+    private static final class HitungAborted extends RuntimeException {
+        private static final long serialVersionUID = 1L;
+
+        HitungAborted() {
+            super(null, null, false, false);
+        }
     }
 }

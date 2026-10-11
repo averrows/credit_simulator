@@ -235,6 +235,17 @@ class SimulatorControllerTest {
     }
 
     @Test
+    void shouldReportIncompleteFile_whenBatchEndsMidHitung() {
+        final Harness harness = new Harness(true, "hitung", "mobil", "baru", "2025");
+
+        harness.controller.run();
+
+        assertThat(harness.output())
+                .contains("Error: file input tidak lengkap untuk hitung")
+                .doesNotContain("Suku Bunga");
+    }
+
+    @Test
     void shouldCalculateFallback_whenDispatchLoad() {
         final Harness harness = new Harness(false);
 
