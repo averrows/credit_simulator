@@ -131,6 +131,11 @@ docker run --rm credit-simulator file_inputs.txt 2>/dev/null || \
 
 Workflow `.github/workflows/ci.yml`: `mvn verify` + `docker build` tiap push/PR.
 
+Docker Hub: bikin access token (Account Settings → Security), lalu tambah dua
+repository secret — `DOCKERHUB_USERNAME` dan `DOCKERHUB_TOKEN`. Job `docker`
+otomatis tag + push `latest` dan SHA tiap push ke branch apa pun; tanpa secret
+dia cuma build (tetap hijau).
+
 ## Asumsi & batasan
 
 - Endpoint mocky bawaan mati → fallback contoh PDF (termasuk aging wajar:
