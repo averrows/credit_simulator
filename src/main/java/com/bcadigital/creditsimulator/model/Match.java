@@ -3,7 +3,7 @@ package com.bcadigital.creditsimulator.model;
 import java.util.Objects;
 
 /**
- * Result of leniently parsing raw user input into a known value.
+ * Result of leniently parsing raw user input into a known {@link Choice}.
  *
  * <p>Parsing accepts an exact name or a unique prefix (e.g. {@code "mot"} for
  * {@code Motor}). The {@code assumed} flag tells the caller whether the value was
@@ -13,7 +13,7 @@ import java.util.Objects;
  * @param value the matched value; never null
  * @param assumed true when matched by unique prefix rather than exact name
  */
-public record Match<T>(T value, boolean assumed) {
+public record Match<T extends Choice>(T value, boolean assumed) {
 
     /**
      * Creates a match.

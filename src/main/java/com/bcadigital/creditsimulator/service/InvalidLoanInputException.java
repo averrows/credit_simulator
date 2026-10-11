@@ -2,6 +2,8 @@ package com.bcadigital.creditsimulator.service;
 
 import java.util.Objects;
 
+import com.bcadigital.creditsimulator.model.InvalidInputException;
+
 /**
  * Base for all loan-input validation failures (Rules of the Game 1-4).
  *
@@ -10,7 +12,7 @@ import java.util.Objects;
  * carries the offending {@link Field} so the controller can re-ask exactly that
  * input instead of restarting the whole form.
  */
-public class InvalidLoanInputException extends RuntimeException {
+public class InvalidLoanInputException extends InvalidInputException {
 
     /** Which input failed validation. */
     public enum Field {
@@ -33,7 +35,7 @@ public class InvalidLoanInputException extends RuntimeException {
      * @param message the user-facing reason; never null
      */
     protected InvalidLoanInputException(final Field field, final String message) {
-        super(Objects.requireNonNull(message, "message"));
+        super(message);
         this.field = Objects.requireNonNull(field, "field");
     }
 

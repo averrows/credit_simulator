@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import com.bcadigital.creditsimulator.model.InvalidInputException;
 import com.bcadigital.creditsimulator.model.LoanRequest;
 import com.bcadigital.creditsimulator.model.VehicleCondition;
 import com.bcadigital.creditsimulator.model.VehicleType;
@@ -76,7 +77,7 @@ public final class RemoteLoader implements LoadService {
      * Loads and validates the remote calculation, or the bundled example.
      *
      * @return the load result, never null
-     * @throws InvalidLoanInputException only when even the bundled example violates
+     * @throws InvalidInputException only when even the bundled example violates
      *     the rules under the validator's clock (a stale-example programmer error,
      *     not a network problem)
      */
@@ -86,7 +87,7 @@ public final class RemoteLoader implements LoadService {
         if (body.isPresent()) {
             try {
                 return new RemoteLoad(buildRequest(MiniJson.parseObject(body.get())), false);
-            } catch (final IllegalArgumentException | InvalidLoanInputException e) {
+            } catch (final IllegalArgumentException | InvalidInputException e) {
                 // Remote data unusable — fall through to the bundled example.
             }
         }
@@ -94,13 +95,9 @@ public final class RemoteLoader implements LoadService {
     }
 
     private LoanRequest buildRequest(final Map<String, String> values) {
-        final VehicleType type = VehicleType.parse(values.get("vehicleType"))
-                .orElseThrow(() -> new IllegalArgumentException("vehicleType tak dikenal"))
-                .value();
-        final VehicleCondition condition = VehicleCondition.parse(values.get("vehicleCondition"))
-                .orElseThrow(() -> new IllegalArgumentException("vehicleCondition tak dikenal"))
-                .value();
-        return validator.validate(type, condition,
+        return validator.validate(
+                VehicleType.parse(values.get("vehicleType")).value(),
+                VehicleCondition.parse(values.get("vehicleCondition")).value(),
                 values.get("vehicleYear"),
                 values.get("totalLoanAmount"),
                 values.get("loanTenure"),

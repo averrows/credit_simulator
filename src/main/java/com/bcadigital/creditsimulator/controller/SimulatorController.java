@@ -1,18 +1,17 @@
 package com.bcadigital.creditsimulator.controller;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
-import java.util.StringJoiner;
 import java.util.function.Function;
 
+import com.bcadigital.creditsimulator.model.Choice;
+import com.bcadigital.creditsimulator.model.InvalidChoiceException;
+import com.bcadigital.creditsimulator.model.InvalidInputException;
 import com.bcadigital.creditsimulator.model.LoanRequest;
 import com.bcadigital.creditsimulator.model.Match;
 import com.bcadigital.creditsimulator.model.MenuCommand;
 import com.bcadigital.creditsimulator.model.VehicleCondition;
 import com.bcadigital.creditsimulator.model.VehicleType;
-import com.bcadigital.creditsimulator.service.InvalidLoanInputException;
 import com.bcadigital.creditsimulator.service.LoadService;
 import com.bcadigital.creditsimulator.service.LoanValidation;
 import com.bcadigital.creditsimulator.service.RemoteLoad;
@@ -92,17 +91,15 @@ public final class SimulatorController {
      *     batch mode where nobody is there to retype), true otherwise
      */
     boolean handleLine(final String line) {
-        final Optional<Match<MenuCommand>> parsed = MenuCommand.parse(line);
-        if (parsed.isEmpty()) {
-            view.showError("perintah tidak dikenal: \"" + line.trim() + "\"");
+        final MenuCommand command;
+        try {
+            command = announced(line, MenuCommand.parse(line));
+        } catch (final InvalidChoiceException e) {
+            view.showError(e.getMessage());
             view.showMessage(MenuCommand.describeAll());
             return !batchMode;
         }
-        final Match<MenuCommand> match = parsed.get();
-        if (match.assumed()) {
-            view.showMessage("(otomatis: \"" + line.trim() + "\" → " + match.value().key() + ")");
-        }
-        return dispatch(match.value());
+        return dispatch(command);
     }
 
     /**
@@ -116,13 +113,13 @@ public final class SimulatorController {
     }
 
     private boolean onHitung() {
-        final VehicleType type = promptChoice("Jenis Kendaraan [Mobil|Motor]: ",
-                VehicleType::parse, VehicleType::candidates, VehicleType::displayName);
+        final VehicleType type = promptValidated("Jenis Kendaraan [Mobil|Motor]: ",
+                raw -> announced(raw, VehicleType.parse(raw)));
         if (type == null) {
             return true;
         }
-        final VehicleCondition condition = promptChoice("Kondisi [Baru|Bekas]: ",
-                VehicleCondition::parse, VehicleCondition::candidates, VehicleCondition::displayName);
+        final VehicleCondition condition = promptValidated("Kondisi [Baru|Bekas]: ",
+                raw -> announced(raw, VehicleCondition.parse(raw)));
         if (condition == null) {
             return true;
         }
@@ -149,7 +146,7 @@ public final class SimulatorController {
     }
 
     /**
-     * Prompts one numeric field until it validates, reporting the error at once.
+     * Prompts one field until it parses, reporting each error at once.
      *
      * @param <T> the parsed value type
      * @param label the prompt text
@@ -167,7 +164,7 @@ public final class SimulatorController {
             }
             try {
                 return parser.apply(raw);
-            } catch (final InvalidLoanInputException e) {
+            } catch (final InvalidInputException e) {
                 view.showError(e.getMessage());
                 if (batchMode) {
                     return null;
@@ -177,49 +174,15 @@ public final class SimulatorController {
     }
 
     /**
-     * Prompts until the user picks a known option, accepting unique prefixes.
+     * Tells the user when a choice was auto-selected from a prefix.
      *
-     * @param <T> the option type
-     * @param label the prompt text
-     * @param parser lenient parsing of one line
-     * @param candidatesOf prefix candidates for ambiguity reports
-     * @param displayOf display name of one option
-     * @return the choice, or null on end-of-input or batch-mode abort
+     * @return the matched value
      */
-    private <T> T promptChoice(final String label,
-            final Function<String, Optional<Match<T>>> parser,
-            final Function<String, List<T>> candidatesOf,
-            final Function<T, String> displayOf) {
-        while (true) {
-            final String raw = view.prompt(label);
-            if (raw == null) {
-                if (batchMode) {
-                    view.showError("file input tidak lengkap untuk hitung");
-                }
-                return null;
-            }
-            final Optional<Match<T>> parsed = parser.apply(raw);
-            if (parsed.isPresent()) {
-                final Match<T> match = parsed.get();
-                if (match.assumed()) {
-                    view.showMessage("(otomatis: \"" + raw.trim() + "\" → " + displayOf.apply(match.value()) + ")");
-                }
-                return match.value();
-            }
-            final List<T> candidates = candidatesOf.apply(raw);
-            if (candidates.size() > 1) {
-                final StringJoiner joiner = new StringJoiner(" atau ");
-                for (final T candidate : candidates) {
-                    joiner.add(displayOf.apply(candidate));
-                }
-                view.showError("\"" + raw.trim() + "\" ambigu (" + joiner + "?)");
-            } else {
-                view.showError("pilihan tidak dikenal: \"" + raw.trim() + "\"");
-            }
-            if (batchMode) {
-                return null;
-            }
+    private <T extends Choice> T announced(final String raw, final Match<T> match) {
+        if (match.assumed()) {
+            view.showMessage("(otomatis: \"" + raw.trim() + "\" → " + match.value().displayName() + ")");
         }
+        return match.value();
     }
 
     private boolean onLoad() {

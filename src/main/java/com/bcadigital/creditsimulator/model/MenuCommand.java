@@ -2,25 +2,24 @@ package com.bcadigital.creditsimulator.model;
 
 import java.util.List;
 import java.util.Locale;
-import java.util.Optional;
 
 /**
  * Commands accepted by the simulator menu loop.
  *
- * <p>Parsing is case-insensitive and trims surrounding whitespace, so interactive
- * typos like {@code " Hitung "} still work. Unknown or blank input yields
- * {@link Optional#empty()} instead of an exception: a mistyped command is an
- * expected user error, not a programming failure, so the caller simply re-prompts.
+ * <p>Parsing is case-insensitive, trims surrounding whitespace, and accepts a unique
+ * prefix, so interactive input like {@code " H "} still selects {@code hitung}.
  */
-public enum MenuCommand {
+public enum MenuCommand implements Choice {
     /** Starts a new simulation by prompting the six loan inputs. */
-    HITUNG("hitung  - simulasi baru (tanya 6 input berurutan)"),
+    HITUNG("simulasi baru (tanya 6 input berurutan)"),
     /** Fetches a saved calculation from the JSON web service and auto-displays it. */
-    LOAD("load    - ambil perhitungan tersimpan + tampilkan hasil"),
+    LOAD("ambil perhitungan tersimpan + tampilkan hasil"),
     /** Lists all available commands. */
-    SHOW("show    - tampilkan perintah ini"),
+    SHOW("tampilkan perintah ini"),
     /** Exits the application. */
-    EXIT("exit    - keluar");
+    EXIT("keluar");
+
+    private static final ChoiceMatcher<MenuCommand> MATCHER = new ChoiceMatcher<>(List.of(values()), "perintah");
 
     private final String description;
 
@@ -29,28 +28,24 @@ public enum MenuCommand {
     }
 
     /**
-     * Returns the lowercase key used for matching user input.
+     * Returns the command as the user types it.
      *
-     * @return the lowercase key, e.g. {@code "hitung"}
+     * @return the lowercase command name, e.g. {@code "hitung"}
      */
-    public String key() {
+    @Override
+    public String displayName() {
         return name().toLowerCase(Locale.ROOT);
     }
 
     /**
      * Parses raw user input into a command, accepting a unique prefix.
      *
-     * <p>Matching is case-insensitive and trims surrounding whitespace. An exact match
-     * yields {@code assumed = false}; a unique prefix (e.g. {@code "h"} for {@code hitung})
-     * yields {@code assumed = true} so the caller can tell the user which command was
-     * auto-selected instead of silently guessing.
-     *
      * @param raw the raw line typed by the user or read from a file; may be null
-     * @return the match, or empty when the input is null, blank, unknown, or ambiguous
-     *     (a prefix of more than one command)
+     * @return the match ({@code assumed = true} for prefix matches), never null
+     * @throws InvalidChoiceException when the input is null, blank, unknown, or ambiguous
      */
-    public static Optional<Match<MenuCommand>> parse(final String raw) {
-        return PrefixMatcher.parse(List.of(values()), MenuCommand::key, raw);
+    public static Match<MenuCommand> parse(final String raw) {
+        return MATCHER.match(raw);
     }
 
     /**
@@ -61,7 +56,8 @@ public enum MenuCommand {
     public static String describeAll() {
         final StringBuilder text = new StringBuilder();
         for (final MenuCommand command : values()) {
-            text.append(command.description).append(System.lineSeparator());
+            text.append(String.format("%-8s- %s", command.key(), command.description))
+                    .append(System.lineSeparator());
         }
         return text.toString();
     }

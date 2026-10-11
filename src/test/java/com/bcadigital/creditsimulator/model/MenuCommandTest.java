@@ -1,6 +1,7 @@
 package com.bcadigital.creditsimulator.model;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
@@ -8,36 +9,37 @@ class MenuCommandTest {
 
     @Test
     void shouldMatchExact_whenMixedCaseAndSurroundingWhitespace() {
-        assertThat(MenuCommand.parse("  HiTuNg ")).contains(new Match<>(MenuCommand.HITUNG, false));
-        assertThat(MenuCommand.parse("LOAD")).contains(new Match<>(MenuCommand.LOAD, false));
-        assertThat(MenuCommand.parse("Show")).contains(new Match<>(MenuCommand.SHOW, false));
-        assertThat(MenuCommand.parse("exit")).contains(new Match<>(MenuCommand.EXIT, false));
+        assertThat(MenuCommand.parse("  HiTuNg ")).isEqualTo(new Match<>(MenuCommand.HITUNG, false));
+        assertThat(MenuCommand.parse("LOAD")).isEqualTo(new Match<>(MenuCommand.LOAD, false));
+        assertThat(MenuCommand.parse("Show")).isEqualTo(new Match<>(MenuCommand.SHOW, false));
+        assertThat(MenuCommand.parse("exit")).isEqualTo(new Match<>(MenuCommand.EXIT, false));
     }
 
     @Test
     void shouldMatchByPrefix_whenUniquePrefix() {
-        assertThat(MenuCommand.parse("h")).contains(new Match<>(MenuCommand.HITUNG, true));
-        assertThat(MenuCommand.parse("HIT")).contains(new Match<>(MenuCommand.HITUNG, true));
-        assertThat(MenuCommand.parse("lo")).contains(new Match<>(MenuCommand.LOAD, true));
-        assertThat(MenuCommand.parse("S")).contains(new Match<>(MenuCommand.SHOW, true));
-        assertThat(MenuCommand.parse("exi")).contains(new Match<>(MenuCommand.EXIT, true));
-        assertThat(MenuCommand.parse("  l  ")).contains(new Match<>(MenuCommand.LOAD, true));
+        assertThat(MenuCommand.parse("h")).isEqualTo(new Match<>(MenuCommand.HITUNG, true));
+        assertThat(MenuCommand.parse("HIT")).isEqualTo(new Match<>(MenuCommand.HITUNG, true));
+        assertThat(MenuCommand.parse("lo")).isEqualTo(new Match<>(MenuCommand.LOAD, true));
+        assertThat(MenuCommand.parse("S")).isEqualTo(new Match<>(MenuCommand.SHOW, true));
+        assertThat(MenuCommand.parse("exi")).isEqualTo(new Match<>(MenuCommand.EXIT, true));
+        assertThat(MenuCommand.parse("  l  ")).isEqualTo(new Match<>(MenuCommand.LOAD, true));
     }
 
     @Test
-    void shouldReturnEmpty_whenUnknownBlankOrNull() {
-        assertThat(MenuCommand.parse("ngawur")).isEmpty();
-        assertThat(MenuCommand.parse("show me")).isEmpty();
-        assertThat(MenuCommand.parse("hitungx")).isEmpty();
-        assertThat(MenuCommand.parse("!@#$")).isEmpty();
-        assertThat(MenuCommand.parse("")).isEmpty();
-        assertThat(MenuCommand.parse("   ")).isEmpty();
-        assertThat(MenuCommand.parse(null)).isEmpty();
+    void shouldReject_whenUnknownBlankOrNull() {
+        assertThatThrownBy(() -> MenuCommand.parse("ngawur")).hasMessage("perintah tidak dikenal: \"ngawur\"");
+        assertThatThrownBy(() -> MenuCommand.parse("ngawur")).isInstanceOf(InvalidChoiceException.class);
+        assertThatThrownBy(() -> MenuCommand.parse("show me")).isInstanceOf(InvalidChoiceException.class);
+        assertThatThrownBy(() -> MenuCommand.parse("hitungx")).isInstanceOf(InvalidChoiceException.class);
+        assertThatThrownBy(() -> MenuCommand.parse("!@#$")).isInstanceOf(InvalidChoiceException.class);
+        assertThatThrownBy(() -> MenuCommand.parse("")).isInstanceOf(InvalidChoiceException.class);
+        assertThatThrownBy(() -> MenuCommand.parse("   ")).isInstanceOf(InvalidChoiceException.class);
+        assertThatThrownBy(() -> MenuCommand.parse(null)).isInstanceOf(InvalidChoiceException.class);
     }
 
     @Test
-    void shouldReturnEmpty_whenInputExceedsCommandNames() {
-        assertThat(MenuCommand.parse("x".repeat(10_000))).isEmpty();
+    void shouldReject_whenInputExceedsCommandNames() {
+        assertThatThrownBy(() -> MenuCommand.parse("x".repeat(10_000))).isInstanceOf(InvalidChoiceException.class);
     }
 
     @Test
@@ -47,6 +49,13 @@ class MenuCommandTest {
                 .contains("load")
                 .contains("show")
                 .contains("exit");
+    }
+
+    @Test
+    void shouldAlignDescriptions_whenDescribeAll() {
+        assertThat(MenuCommand.describeAll())
+                .startsWith("hitung  - simulasi baru (tanya 6 input berurutan)" + System.lineSeparator())
+                .contains("exit    - keluar" + System.lineSeparator());
     }
 
     @Test
