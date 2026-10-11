@@ -32,6 +32,9 @@ bin/credit_simulator                # sama, lewat folder bin/
 ./credit_simulator --url URL        # ganti endpoint load (lihat "Load")
 ```
 
+Run pertama otomatis menjalankan `mvn -q -DskipTests package` kalau jar belum
+ada, jadi clone baru langsung bisa dijalankan (butuh Java 17 + Maven).
+
 Contoh sesi interaktif:
 
 ```

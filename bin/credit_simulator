@@ -1,9 +1,3 @@
 #!/bin/sh
-# Launcher under bin/ (spec also shows bin/credit_simulator).
-DIR="$(cd "$(dirname "$0")/.." && pwd)"
-JAR="$(ls -t "$DIR"/target/credit-simulator-*.jar 2>/dev/null | head -1)"
-if [ -z "$JAR" ]; then
-  echo "Error: jar belum dibangun. Jalankan: mvn package" >&2
-  exit 1
-fi
-exec java -jar "$JAR" "$@"
+# Launcher under bin/ (spec also shows bin/credit_simulator); delegates to the root launcher.
+exec "$(cd "$(dirname "$0")/.." && pwd)/credit_simulator" "$@"
