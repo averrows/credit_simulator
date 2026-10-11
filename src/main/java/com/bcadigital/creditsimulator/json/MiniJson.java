@@ -1,21 +1,23 @@
-package com.bcadigital.creditsimulator.service;
+package com.bcadigital.creditsimulator.json;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
 /**
- * Minimal JSON object parser for the flat web-service payload.
+ * Minimal JSON parser for flat objects: the web-service payload and saved sheets.
  *
- * <p>Supports exactly what the loader needs: one object with string keys and
- * string/number/boolean/null values, arbitrary whitespace, and standard string
- * escapes. Anything else (arrays, nesting, truncation) fails fast with
- * {@link IllegalArgumentException} so the loader can fall back to the bundled
- * example. No external dependency on purpose: the test mandates no frameworks
+ * <p>Supports exactly what the loader and sheet store need: one object, or a
+ * top-level array of objects, with string keys and string/number/boolean/null
+ * values, arbitrary whitespace, and standard string escapes. Anything else (nested
+ * values, truncation) fails fast with {@link IllegalArgumentException} so callers
+ * can fall back gracefully. No external dependency on purpose: the test mandates no frameworks
  * beyond a web-services library, and the JDK HTTP client plus this parser mean
  * we need none at all.
  */
-final class MiniJson {
+public final class MiniJson {
 
     private final String text;
     private int position;
@@ -31,7 +33,7 @@ final class MiniJson {
      * @return key to raw value, never null
      * @throws IllegalArgumentException when the text is not a flat JSON object
      */
-    static Map<String, String> parseObject(final String json) {
+    public static Map<String, String> parseObject(final String json) {
         Objects.requireNonNull(json, "json");
         final MiniJson parser = new MiniJson(json);
         parser.skipWhitespace();
@@ -41,6 +43,44 @@ final class MiniJson {
             throw new IllegalArgumentException("JSON tidak valid: teks berlebih di akhir");
         }
         return values;
+    }
+
+    /**
+     * Parses a JSON array of flat objects, e.g. the saved sheets file.
+     *
+     * @param json the JSON text; never null
+     * @return one key-to-raw-value map per element, in order, never null
+     * @throws IllegalArgumentException when the text is not an array of flat objects
+     */
+    public static List<Map<String, String>> parseObjectArray(final String json) {
+        Objects.requireNonNull(json, "json");
+        final MiniJson parser = new MiniJson(json);
+        parser.skipWhitespace();
+        parser.expect('[');
+        final List<Map<String, String>> objects = new ArrayList<>();
+        parser.skipWhitespace();
+        if (parser.peek() == ']') {
+            parser.position++;
+        } else {
+            while (true) {
+                parser.skipWhitespace();
+                objects.add(parser.readObject());
+                parser.skipWhitespace();
+                final char next = parser.peek();
+                parser.position++;
+                if (next == ']') {
+                    break;
+                }
+                if (next != ',') {
+                    throw new IllegalArgumentException("JSON tidak valid pada posisi " + (parser.position - 1));
+                }
+            }
+        }
+        parser.skipWhitespace();
+        if (!parser.atEnd()) {
+            throw new IllegalArgumentException("JSON tidak valid: teks berlebih di akhir");
+        }
+        return objects;
     }
 
     private Map<String, String> readObject() {

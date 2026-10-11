@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import com.bcadigital.creditsimulator.json.MiniJson;
 import com.bcadigital.creditsimulator.model.InvalidInputException;
 import com.bcadigital.creditsimulator.model.LoanRequest;
 import com.bcadigital.creditsimulator.model.VehicleCondition;
