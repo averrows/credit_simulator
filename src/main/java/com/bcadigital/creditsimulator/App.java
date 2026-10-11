@@ -4,7 +4,6 @@ import java.nio.file.Path;
 import java.time.Clock;
 
 import com.bcadigital.creditsimulator.controller.SimulatorController;
-import com.bcadigital.creditsimulator.service.RemoteLoader;
 import com.bcadigital.creditsimulator.view.ConsoleView;
 import com.bcadigital.creditsimulator.view.FileInputSource;
 import com.bcadigital.creditsimulator.view.StreamInputSource;
@@ -28,28 +27,18 @@ public final class App {
      * @param args zero arguments for interactive mode, or one batch-file path
      */
     public static void main(final String[] args) {
-        String apiUrl = RemoteLoader.DEFAULT_URL;
-        String file = null;
-        for (int i = 0; i < args.length; i++) {
-            if ("--url".equals(args[i]) && i + 1 < args.length) {
-                apiUrl = args[++i];
-            } else if ("-h".equals(args[i]) || "--help".equals(args[i]) || args[i].startsWith("-")) {
-                System.out.println("Usage: credit_simulator [file_inputs.txt] [--url URL]");
-                return;
-            } else if (file == null) {
-                file = args[i];
-            } else {
-                System.out.println("Usage: credit_simulator [file_inputs.txt] [--url URL]");
-                return;
-            }
+        final AppArgs.Options options = AppArgs.parse(args);
+        if (options.help()) {
+            System.out.println("Usage: credit_simulator [file_inputs.txt] [--url URL]");
+            return;
         }
-        final boolean batchMode = file != null;
+        final boolean batchMode = options.file() != null;
         final ConsoleView view;
         if (batchMode) {
-            view = new ConsoleView(new FileInputSource(Path.of(file)), System.out);
+            view = new ConsoleView(new FileInputSource(Path.of(options.file())), System.out);
         } else {
             view = new ConsoleView(new StreamInputSource(System.in), System.out);
         }
-        new SimulatorController(view, batchMode, Clock.systemDefaultZone(), apiUrl).run();
+        new SimulatorController(view, batchMode, Clock.systemDefaultZone(), options.apiUrl()).run();
     }
 }
