@@ -1,5 +1,6 @@
 package com.bcadigital.creditsimulator.model;
 
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -49,25 +50,7 @@ public enum MenuCommand {
      *     (a prefix of more than one command)
      */
     public static Optional<Match<MenuCommand>> parse(final String raw) {
-        if (raw == null || raw.isBlank()) {
-            return Optional.empty();
-        }
-        final String normalized = raw.trim().toLowerCase(Locale.ROOT);
-        for (final MenuCommand command : values()) {
-            if (command.key().equals(normalized)) {
-                return Optional.of(new Match<>(command, false));
-            }
-        }
-        MenuCommand hit = null;
-        for (final MenuCommand command : values()) {
-            if (command.key().startsWith(normalized)) {
-                if (hit != null) {
-                    return Optional.empty();
-                }
-                hit = command;
-            }
-        }
-        return Optional.ofNullable(hit).map(command -> new Match<>(command, true));
+        return PrefixMatcher.parse(List.of(values()), MenuCommand::key, raw);
     }
 
     /**

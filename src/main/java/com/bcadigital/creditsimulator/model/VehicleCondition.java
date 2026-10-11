@@ -1,6 +1,5 @@
 package com.bcadigital.creditsimulator.model;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -50,17 +49,7 @@ public enum VehicleCondition {
      *     the input is null, blank, unknown, or ambiguous
      */
     public static Optional<Match<VehicleCondition>> parse(final String raw) {
-        if (raw == null || raw.isBlank()) {
-            return Optional.empty();
-        }
-        final String normalized = raw.trim().toLowerCase(Locale.ROOT);
-        for (final VehicleCondition condition : values()) {
-            if (condition.key().equals(normalized)) {
-                return Optional.of(new Match<>(condition, false));
-            }
-        }
-        final List<VehicleCondition> found = candidates(raw);
-        return found.size() == 1 ? Optional.of(new Match<>(found.get(0), true)) : Optional.empty();
+        return PrefixMatcher.parse(List.of(values()), VehicleCondition::key, raw);
     }
 
     /**
@@ -70,16 +59,6 @@ public enum VehicleCondition {
      * @return the matching candidates, possibly empty, never null
      */
     public static List<VehicleCondition> candidates(final String raw) {
-        final List<VehicleCondition> found = new ArrayList<>();
-        if (raw == null || raw.isBlank()) {
-            return found;
-        }
-        final String normalized = raw.trim().toLowerCase(Locale.ROOT);
-        for (final VehicleCondition condition : values()) {
-            if (condition.key().startsWith(normalized)) {
-                found.add(condition);
-            }
-        }
-        return found;
+        return PrefixMatcher.candidates(List.of(values()), VehicleCondition::key, raw);
     }
 }
